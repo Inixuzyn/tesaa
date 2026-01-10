@@ -769,3 +769,154 @@ img:before {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* Tambahkan di akhir file */
+
+/* Error states */
+.error-container {
+    text-align: center;
+    padding: 40px;
+    background: rgba(244, 67, 54, 0.1);
+    border-radius: 10px;
+    margin: 20px 0;
+    border-left: 4px solid #F44336;
+}
+
+.error-container h3 {
+    color: #F44336;
+    margin-bottom: 10px;
+}
+
+.error-container button {
+    background: #4a00e0;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin-top: 15px;
+    cursor: pointer;
+}
+
+/* Loading spinner */
+.loading {
+    text-align: center;
+    padding: 40px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255,255,255,0.1);
+    border-top-color: #4a00e0;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Detail page styles */
+.detail-stats {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.detail-stats span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Chapter items */
+.chapter-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chapter-item:hover {
+    background: rgba(74,0,224,0.1);
+    transform: translateX(5px);
+}
+
+.chapter-info {
+    flex: 1;
+}
+
+.chapter-title {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.chapter-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.chapter-action {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+}
+
+/* No data state */
+.no-data, .no-chapters {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* API status */
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #F44336;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.status-dot.connected {
+    background: #00C853;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Rating stars */
+.manga-rating {
+    color: #FFD700;
+    font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .detail-container {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .detail-cover {
+        max-width: 300px;
+        margin: 0 auto 30px;
+    }
+    
+    .detail-stats {
+        flex-wrap: wrap;
+    }
+}
