@@ -16,6 +16,12 @@
                 <i class="fas fa-ghost"></i>
                 <span>Tesaa Manga Reader</span>
             </div>
+            
+            <!-- Mobile Menu Toggle -->
+            <button id="mobileMenuToggle" class="mobile-menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
             <div class="nav-search">
                 <div class="search-box">
                     <i class="fas fa-search"></i>
@@ -84,12 +90,13 @@
         <section id="new-section" class="content-section">
             <div class="section-header">
                 <h2><i class="fas fa-fire"></i> Manga Terbaru</h2>
-                <button id="refreshNew" class="refresh-btn">
-                    <i class="fas fa-sync-alt"></i> Refresh
+                <button id="refreshNew" class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Home
                 </button>
             </div>
             <div id="new-full-list" class="manga-grid full-grid">
                 <!-- Diisi oleh JavaScript -->
+                <div class="loading">Memuat manga terbaru...</div>
             </div>
             <div class="pagination">
                 <button id="prevNew" class="pagination-btn disabled">
@@ -106,9 +113,13 @@
         <section id="top-section" class="content-section">
             <div class="section-header">
                 <h2><i class="fas fa-crown"></i> Top Manga</h2>
+                <button class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Home
+                </button>
             </div>
             <div id="top-full-list" class="manga-grid full-grid">
                 <!-- Diisi oleh JavaScript -->
+                <div class="loading">Memuat top manga...</div>
             </div>
         </section>
 
@@ -116,9 +127,13 @@
         <section id="recommend-section" class="content-section">
             <div class="section-header">
                 <h2><i class="fas fa-star"></i> Rekomendasi</h2>
+                <button class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Home
+                </button>
             </div>
             <div id="recommend-full-list" class="manga-grid full-grid">
                 <!-- Diisi oleh JavaScript -->
+                <div class="loading">Memuat rekomendasi...</div>
             </div>
         </section>
 
@@ -126,79 +141,22 @@
         <section id="search-section" class="content-section">
             <div class="section-header">
                 <h2><i class="fas fa-search"></i> Hasil Pencarian</h2>
-                <span id="search-term"></span>
+                <span id="search-term" style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 10px;"></span>
+                <button class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Home
+                </button>
             </div>
             <div id="search-results" class="manga-grid full-grid">
                 <!-- Diisi oleh JavaScript -->
+                <div class="loading">Mencari...</div>
             </div>
         </section>
 
         <!-- Manga Detail Section -->
         <section id="detail-section" class="content-section">
-            <button class="back-btn" id="backFromDetail">
-                <i class="fas fa-arrow-left"></i> Kembali
-            </button>
             <div id="manga-detail-container">
                 <!-- Diisi oleh JavaScript -->
-            </div>
-        </section>
-
-        <!-- Chapter Reader Section -->
-        <section id="reader-section" class="content-section">
-            <div class="reader-header">
-                <button class="back-btn" id="backFromReader">
-                    <i class="fas fa-arrow-left"></i> Kembali ke Detail
-                </button>
-                <div class="reader-info">
-                    <h3 id="chapter-title">Memuat chapter...</h3>
-                    <div class="chapter-nav">
-                        <button id="prevChapter" class="chapter-nav-btn">
-                            <i class="fas fa-chevron-left"></i> Sebelumnya
-                        </button>
-                        <select id="chapterSelect" class="chapter-select">
-                            <option>Memuat daftar chapter...</option>
-                        </select>
-                        <button id="nextChapter" class="chapter-nav-btn">
-                            Selanjutnya <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="reader-controls">
-                    <button id="zoomIn" class="control-btn" title="Zoom In">
-                        <i class="fas fa-search-plus"></i>
-                    </button>
-                    <button id="zoomOut" class="control-btn" title="Zoom Out">
-                        <i class="fas fa-search-minus"></i>
-                    </button>
-                    <button id="darkModeToggle" class="control-btn" title="Mode Gelap">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    <button id="fullscreen" class="control-btn" title="Layar Penuh">
-                        <i class="fas fa-expand"></i>
-                    </button>
-                </div>
-            </div>
-            <div id="image-container" class="image-container">
-                <!-- Gambar chapter akan dimuat di sini -->
-                <div class="loading">Memuat gambar chapter...</div>
-            </div>
-            <div class="reader-footer">
-                <div class="loading-progress">
-                    <span id="loaded-count">0</span> / <span id="total-count">0</span> gambar dimuat
-                </div>
-                <div class="reader-settings">
-                    <label for="loadMode">Mode Muat: </label>
-                    <select id="loadMode" class="setting-select">
-                        <option value="lazy">Lazy Load</option>
-                        <option value="all">Load Semua</option>
-                    </select>
-                    <label for="imageQuality">Kualitas: </label>
-                    <select id="imageQuality" class="setting-select">
-                        <option value="high">Tinggi</option>
-                        <option value="medium" selected>Sedang</option>
-                        <option value="low">Rendah</option>
-                    </select>
-                </div>
+                <div class="loading">Memuat detail manga...</div>
             </div>
         </section>
 
@@ -206,8 +164,8 @@
         <section id="history-section" class="content-section">
             <div class="section-header">
                 <h2><i class="fas fa-history"></i> Riwayat Baca</h2>
-                <button id="clearHistory" class="danger-btn">
-                    <i class="fas fa-trash"></i> Hapus Semua
+                <button class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Home
                 </button>
             </div>
             <div id="history-list" class="history-container">
@@ -215,6 +173,9 @@
                 <div class="empty-state">
                     <i class="fas fa-history fa-3x"></i>
                     <p>Belum ada riwayat baca</p>
+                    <button class="retry-btn" onclick="window.MangaApp.loadHistory()">
+                        <i class="fas fa-redo"></i> Muat Ulang
+                    </button>
                 </div>
             </div>
         </section>
@@ -224,7 +185,7 @@
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-info">
-                <h3><i class="fas fa-ghost"></i> Shinigami Reader</h3>
+                <h3><i class="fas fa-ghost"></i> Tesaa Manga Reader</h3>
                 <p>Website baca manga, manhwa, dan manhua gratis. Semua konten berasal dari API publik.</p>
                 <p class="disclaimer">
                     <i class="fas fa-exclamation-triangle"></i> 
@@ -257,6 +218,6 @@
     <!-- JavaScript Files -->
     <script src="/js/api.js"></script>
     <script src="/js/app.js"></script>
-    <script src="/js/reader.js"></script>
+    <!-- Note: reader.js tidak lagi digunakan karena reader sudah built-in di app.js -->
 </body>
 </html>
