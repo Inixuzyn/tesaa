@@ -237,7 +237,7 @@ body {
     transform: translateX(5px);
 }
 
-/* Manga Grid - FIXED THUMBNAIL */
+/* Manga Grid */
 .manga-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -270,8 +270,8 @@ body {
 
 .manga-card img {
     width: 100%;
-    height: 250px; /* 🔥 FIX: Fixed height for consistency */
-    object-fit: cover; /* 🔥 FIX: Ensures image covers area without distortion */
+    height: 250px;
+    object-fit: cover;
     display: block;
     transition: var(--transition);
     background: linear-gradient(45deg, #1a1a2e, #16213e);
@@ -401,7 +401,7 @@ body {
     width: 100%;
     max-width: 300px;
     height: auto;
-    aspect-ratio: 2/3; /* 🔥 FIX: Maintain proper aspect ratio */
+    aspect-ratio: 2/3;
     object-fit: cover;
     border-radius: 10px;
     box-shadow: var(--shadow);
@@ -694,7 +694,33 @@ body {
     scroll-behavior: smooth;
 }
 
-/* Reader Header - AUTO HIDE FEATURE */
+/* TOGGLE BUTTON */
+.reader-toggle-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    z-index: 10002;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+.reader-toggle-btn:hover {
+    background: var(--secondary-color);
+    transform: scale(1.1);
+}
+
+/* Reader Header */
 .reader-header {
     position: fixed;
     top: 0;
@@ -786,8 +812,8 @@ body {
     padding: 20px;
     text-align: center;
     max-width: 1200px;
-    margin: 80px auto 60px; /* 🔥 Space for fixed header/footer */
-    padding-top: 100px; /* 🔥 Extra space for hidden header */
+    margin: 80px auto 60px;
+    padding-top: 100px;
 }
 
 .reader-page {
@@ -836,7 +862,7 @@ body {
     opacity: 1;
 }
 
-/* Reader Footer - AUTO HIDE FEATURE */
+/* Reader Footer */
 .reader-footer {
     position: fixed;
     bottom: 0;
@@ -883,48 +909,6 @@ body {
     transform: scale(1.05);
 }
 
-/* Reader Controls Overlay */
-.reader-controls-overlay {
-    position: fixed;
-    top: 50%;
-    right: 20px;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    z-index: 10002;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #333;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.reader-controls-overlay.show {
-    opacity: 1;
-}
-
-.reader-control-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 1px solid #555;
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    transition: all 0.3s ease;
-}
-
-.reader-control-btn:hover {
-    background: rgba(74, 0, 224, 0.5);
-    transform: scale(1.1);
-}
-
 /* Reader Progress Bar */
 .reader-progress-bar {
     position: fixed;
@@ -968,32 +952,6 @@ body {
     0% { opacity: 1; }
     70% { opacity: 1; }
     100% { opacity: 0; }
-}
-
-/* Reader Mode Indicator */
-.reader-mode-indicator {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 8px 15px;
-    border-radius: 20px;
-    z-index: 10005;
-    font-size: 0.9rem;
-    display: none;
-    border: 1px solid var(--primary-color);
-}
-
-.reader-mode-indicator.show {
-    display: block;
-    animation: slideDown 0.5s ease;
-}
-
-@keyframes slideDown {
-    from { top: -50px; opacity: 0; }
-    to { top: 20px; opacity: 1; }
 }
 
 /* Footer */
@@ -1141,7 +1099,7 @@ body {
     }
     
     .manga-card img {
-        height: 220px; /* 🔥 Adjusted for tablet */
+        height: 220px;
     }
     
     .detail-container {
@@ -1157,15 +1115,11 @@ body {
         grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     }
     
-    .reader-controls-overlay {
-        right: 10px;
-        padding: 10px;
-    }
-    
-    .reader-control-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
+    .reader-toggle-btn {
+        right: 15px;
+        width: 45px;
+        height: 45px;
+        font-size: 1.3rem;
     }
 }
 
@@ -1224,7 +1178,7 @@ body {
     }
     
     .manga-card img {
-        height: 190px; /* 🔥 Adjusted for mobile */
+        height: 190px;
     }
     
     .detail-header {
@@ -1294,7 +1248,7 @@ body {
     
     .reader-images-container {
         padding: 10px;
-        margin-top: 140px; /* 🔥 Extra space for mobile header */
+        margin-top: 140px;
     }
     
     .reader-footer {
@@ -1303,8 +1257,12 @@ body {
         text-align: center;
     }
     
-    .reader-controls-overlay {
-        display: none; /* 🔥 Hide overlay on mobile */
+    .reader-toggle-btn {
+        top: 15px;
+        right: 15px;
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
     }
     
     .footer-content {
@@ -1327,7 +1285,7 @@ body {
     }
     
     .manga-card img {
-        height: 180px; /* 🔥 Final mobile height */
+        height: 180px;
     }
     
     .manga-title {
@@ -1372,7 +1330,7 @@ body {
     }
     
     .reader-images-container {
-        margin-top: 160px; /* 🔥 More space for mobile */
+        margin-top: 160px;
     }
 }
 
@@ -1385,7 +1343,7 @@ body {
     }
     
     .manga-card img {
-        height: 200px; /* 🔥 Single column full height */
+        height: 200px;
     }
     
     .detail-title {
@@ -1449,15 +1407,4 @@ img:before {
 
 .manga-reader-container::-webkit-scrollbar-thumb:hover {
     background: var(--secondary-color);
-}
-
-/* Touch-friendly zoom for mobile */
-@media (hover: none) and (pointer: coarse) {
-    .reader-image {
-        cursor: default;
-    }
-    
-    .reader-image.zoomed {
-        transform: scale(1.2);
-    }
 }
