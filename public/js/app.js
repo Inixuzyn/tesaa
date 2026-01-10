@@ -1,6 +1,6 @@
 /**
- * Manga App - FINAL COMPLETE VERSION
- * Includes: Chapter pagination, reader close fix, single back button, Mobile responsive, Auto-hide reader header
+ * Manga App - COMPLETE VERSION
+ * Includes: Chapter pagination, reader close fix, single back button, Mobile responsive, Toggle button for reader header
  */
 
 class MangaApp {
@@ -9,12 +9,6 @@ class MangaApp {
         this.currentManga = null;
         this.currentChapter = null;
         this.chapters = [];
-        this.readerState = {
-            isHeaderVisible: true,
-            lastScrollY: 0,
-            scrollTimeout: null,
-            autoHideTimeout: null
-        };
         this.init();
     }
 
@@ -477,7 +471,12 @@ class MangaApp {
         
         const readerHTML = `
             <div id="manga-reader" class="manga-reader-container">
-                <!-- 🔥 AUTO-HIDE HEADER -->
+                <!-- 🔥 TOGGLE BUTTON -->
+                <button class="reader-toggle-btn" id="toggleUIButton" title="Show/Hide Controls">
+                    <i class="fas fa-eye"></i>
+                </button>
+                
+                <!-- HEADER -->
                 <div class="reader-header" id="readerHeader">
                     <div class="reader-header-left">
                         <button id="closeReaderBtn" class="close-reader-btn">
@@ -503,7 +502,7 @@ class MangaApp {
                     </div>
                 </div>
                 
-                <!-- 🔥 AUTO-HIDE FOOTER -->
+                <!-- FOOTER -->
                 <div class="reader-footer" id="readerFooter">
                     <div class="reader-footer-info">
                         ${chapterData.images ? chapterData.images.length : 0} pages
@@ -532,24 +531,6 @@ class MangaApp {
                     `).join('')}
                 </div>
                 
-                <!-- Controls Overlay (Desktop only) -->
-                ${!isMobile ? `
-                    <div class="reader-controls-overlay" id="readerControls">
-                        <button class="reader-control-btn" id="zoomInBtn" title="Zoom In">
-                            <i class="fas fa-search-plus"></i>
-                        </button>
-                        <button class="reader-control-btn" id="zoomOutBtn" title="Zoom Out">
-                            <i class="fas fa-search-minus"></i>
-                        </button>
-                        <button class="reader-control-btn" id="toggleDarkMode" title="Toggle Dark Mode">
-                            <i class="fas fa-moon"></i>
-                        </button>
-                        <button class="reader-control-btn" id="fullscreenBtn" title="Fullscreen">
-                            <i class="fas fa-expand"></i>
-                        </button>
-                    </div>
-                ` : ''}
-                
                 <!-- Zoom Indicator -->
                 <div class="zoom-indicator" id="zoomIndicator">
                     Zoom: 100%
@@ -561,128 +542,61 @@ class MangaApp {
         readerDiv.innerHTML = readerHTML;
         document.body.appendChild(readerDiv);
         
-        // 🔥 INITIALIZE AUTO-HIDE FUNCTIONALITY
-        this.setupReaderAutoHide();
+        // 🔥 SETUP TOGGLE BUTTON LOGIC
+        this.setupReaderToggle();
         
         // Setup event listeners
         this.setupReaderEvents(chapterData);
         
-        // Preload first few images
+        // Preload images
         this.preloadImages(chapterData.images.slice(0, 3));
-    }
-
-    setupReaderAutoHide() {
-    const readerContainer = document.getElementById('manga-reader');
-    const readerHeader = document.getElementById('readerHeader');
-    const readerFooter = document.getElementById('readerFooter');
-    const readerControls = document.getElementById('readerControls');
-    
-    if (!readerContainer || !readerHeader) return;
-    
-    let isUIVisible = true;
-    let hideTimeout = null;
-    let lastTapTime = 0;
-    
-    const showUI = () => {
-        readerHeader.classList.remove('hidden');
-        readerFooter.classList.remove('hidden');
-        if (readerControls && window.innerWidth > 768) {
-            readerControls.classList.add('show');
-        }
-        isUIVisible = true;
         
-        // Auto-hide setelah 3 detik
-        if (hideTimeout) clearTimeout(hideTimeout);
-        hideTimeout = setTimeout(() => {
-            hideUI();
-        }, 3000);
-    };
-    
-    const hideUI = () => {
-        readerHeader.classList.add('hidden');
-        readerFooter.classList.add('hidden');
-        if (readerControls) readerControls.classList.remove('show');
-        isUIVisible = false;
-    };
-    
-    const toggleUI = () => {
-        if (isUIVisible) {
-            hideUI();
-        } else {
-            showUI();
-        }
-    };
-    
-    // 🔥 1. Single tap pada area reader (selain gambar) untuk show UI
-    readerContainer.addEventListener('click', (e) => {
-        // Jika klik di gambar, biarkan zoom logic handle
-        if (e.target.closest('.reader-image') || e.target.closest('.page-number')) {
-            return;
-        }
-        
-        const currentTime = Date.now();
-        const timeSinceLastTap = currentTime - lastTapTime;
-        
-        if (timeSinceLastTap < 300) {
-            // 🔥 2. Double tap cepat untuk toggle UI
-            toggleUI();
-        } else {
-            // 🔥 3. Single tap untuk show UI
-            showUI();
-        }
-        
-        lastTapTime = currentTime;
-    });
-    
-    // 🔥 4. Mouse move untuk desktop show UI
-    if (window.innerWidth > 768) {
-        let mouseMoveTimer;
-        readerContainer.addEventListener('mousemove', () => {
-            clearTimeout(mouseMoveTimer);
-            showUI();
-            
-            // Quick hide setelah mouse berhenti
-            mouseMoveTimer = setTimeout(() => {
-                if (isUIVisible) {
-                    hideUI();
-                }
-            }, 1000);
-        });
-    }
-    
-    // 🔥 5. ESC key untuk show UI
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (!isUIVisible) {
-                showUI();
-            } else {
-                hideUI();
-            }
-        }
-    });
-    
-    // 🔥 6. Auto-hide awal
-    hideTimeout = setTimeout(() => {
-        hideUI();
-    }, 3000);
-    
-    // Update progress
-    readerContainer.addEventListener('scroll', () => {
-        this.updateReaderProgress();
-    });
-}
-
-    updateReaderProgress() {
+        // Update progress bar on scroll
         const readerContainer = document.getElementById('manga-reader');
-        const progressBar = document.getElementById('readerProgress');
+        if (readerContainer) {
+            readerContainer.addEventListener('scroll', () => {
+                this.updateReaderProgress();
+            });
+        }
+    }
+
+    setupReaderToggle() {
+        const toggleBtn = document.getElementById('toggleUIButton');
+        const readerHeader = document.getElementById('readerHeader');
+        const readerFooter = document.getElementById('readerFooter');
         
-        if (!readerContainer || !progressBar) return;
+        if (!toggleBtn || !readerHeader) return;
         
-        const scrollTop = readerContainer.scrollTop;
-        const scrollHeight = readerContainer.scrollHeight - readerContainer.clientHeight;
-        const progress = (scrollTop / scrollHeight) * 100;
+        let isUIVisible = true;
         
-        progressBar.style.width = `${progress}%`;
+        // Toggle function
+        const toggleUI = () => {
+            isUIVisible = !isUIVisible;
+            
+            if (isUIVisible) {
+                // Show UI
+                readerHeader.classList.remove('hidden');
+                readerFooter.classList.remove('hidden');
+                toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                toggleBtn.title = "Hide Controls";
+            } else {
+                // Hide UI
+                readerHeader.classList.add('hidden');
+                readerFooter.classList.add('hidden');
+                toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
+                toggleBtn.title = "Show Controls";
+            }
+        };
+        
+        // Click toggle button
+        toggleBtn.addEventListener('click', toggleUI);
+        
+        // ESC key juga bisa toggle
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' || e.key === 'h' || e.key === 'H') {
+                toggleUI();
+            }
+        });
     }
 
     setupReaderEvents(chapterData) {
@@ -755,9 +669,6 @@ class MangaApp {
             });
         });
         
-        // Desktop controls
-        this.setupDesktopControls();
-        
         // ESC key to close
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
@@ -765,18 +676,6 @@ class MangaApp {
                 if (reader) {
                     reader.remove();
                     this.showSection('detail');
-                }
-            }
-            
-            // Spacebar to toggle zoom
-            if (e.key === ' ' && document.querySelector('.reader-image')) {
-                e.preventDefault();
-                const images = document.querySelectorAll('.reader-image');
-                if (images.length > 0) {
-                    const currentImage = this.getCurrentVisibleImage();
-                    if (currentImage) {
-                        currentImage.classList.toggle('zoomed');
-                    }
                 }
             }
         });
@@ -794,61 +693,17 @@ class MangaApp {
         }
     }
 
-    setupDesktopControls() {
-        if (window.innerWidth <= 768) return;
+    updateReaderProgress() {
+        const readerContainer = document.getElementById('manga-reader');
+        const progressBar = document.getElementById('readerProgress');
         
-        // Zoom in
-        const zoomInBtn = document.getElementById('zoomInBtn');
-        if (zoomInBtn) {
-            zoomInBtn.addEventListener('click', () => {
-                const currentImage = this.getCurrentVisibleImage();
-                if (currentImage) {
-                    currentImage.classList.add('zoomed');
-                }
-            });
-        }
+        if (!readerContainer || !progressBar) return;
         
-        // Zoom out
-        const zoomOutBtn = document.getElementById('zoomOutBtn');
-        if (zoomOutBtn) {
-            zoomOutBtn.addEventListener('click', () => {
-                const currentImage = this.getCurrentVisibleImage();
-                if (currentImage) {
-                    currentImage.classList.remove('zoomed');
-                }
-            });
-        }
+        const scrollTop = readerContainer.scrollTop;
+        const scrollHeight = readerContainer.scrollHeight - readerContainer.clientHeight;
+        const progress = (scrollTop / scrollHeight) * 100;
         
-        // Fullscreen
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
-        if (fullscreenBtn) {
-            fullscreenBtn.addEventListener('click', () => {
-                const reader = document.getElementById('manga-reader');
-                if (!document.fullscreenElement) {
-                    reader.requestFullscreen();
-                } else {
-                    document.exitFullscreen();
-                }
-            });
-        }
-    }
-
-    getCurrentVisibleImage() {
-        const reader = document.getElementById('manga-reader');
-        if (!reader) return null;
-        
-        const images = document.querySelectorAll('.reader-image');
-        const readerRect = reader.getBoundingClientRect();
-        
-        for (const img of images) {
-            const imgRect = img.getBoundingClientRect();
-            if (imgRect.top >= readerRect.top && imgRect.bottom <= readerRect.bottom) {
-                return img;
-            }
-        }
-        
-        // Return first image if none is fully visible
-        return images.length > 0 ? images[0] : null;
+        progressBar.style.width = `${progress}%`;
     }
 
     preloadImages(imageUrls) {
