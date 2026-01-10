@@ -657,3 +657,115 @@ body {
         justify-content: center;
     }
 }
+
+/* Image fallback styling */
+img {
+    background: linear-gradient(45deg, #1a1a2e, #16213e);
+}
+
+img:before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background-color: #1a1a2e;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Arial" font-size="14">Image</text></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 50px;
+}
+
+/* Error states */
+.error-state {
+    text-align: center;
+    padding: 40px;
+    background: rgba(255, 65, 108, 0.1);
+    border-radius: 10px;
+    border-left: 4px solid #ff416c;
+    margin: 20px 0;
+}
+
+.error-state i {
+    font-size: 3rem;
+    color: #ff416c;
+    margin-bottom: 20px;
+}
+
+.error-state button {
+    background: #4a00e0;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin-top: 20px;
+    cursor: pointer;
+}
+
+/* Loading spinner for images */
+.manga-card img {
+    position: relative;
+}
+
+.manga-card img.loading {
+    opacity: 0.7;
+}
+
+.manga-card img.loading:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: #4a00e0;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    transform: translate(-50%, -50%);
+}
+
+/* Chapter items */
+.chapter-item {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.chapter-item:hover {
+    transform: translateX(5px);
+    background: rgba(74, 0, 224, 0.1) !important;
+}
+
+/* Status badges */
+.status-ongoing {
+    background: rgba(0, 200, 83, 0.1);
+    color: #00c853;
+}
+
+.status-completed {
+    background: rgba(33, 150, 243, 0.1);
+    color: #2196f3;
+}
+
+.status-hiatus {
+    background: rgba(255, 152, 0, 0.1);
+    color: #ff9800;
+}
+
+/* Responsive detail page */
+@media (max-width: 768px) {
+    .detail-container {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .detail-cover {
+        max-width: 300px;
+        margin: 0 auto 20px;
+    }
+    
+    .chapter-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
