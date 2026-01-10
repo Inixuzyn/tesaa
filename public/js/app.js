@@ -1,6 +1,6 @@
 /**
  * Manga App - FINAL COMPLETE VERSION
- * Includes: Chapter pagination, reader close fix, single back button, Mobile responsive
+ * Includes: Chapter pagination, reader close fix, single back button, Mobile responsive, Auto-hide reader header
  */
 
 class MangaApp {
@@ -9,6 +9,12 @@ class MangaApp {
         this.currentManga = null;
         this.currentChapter = null;
         this.chapters = [];
+        this.readerState = {
+            isHeaderVisible: true,
+            lastScrollY: 0,
+            scrollTimeout: null,
+            autoHideTimeout: null
+        };
         this.init();
     }
 
@@ -21,16 +27,15 @@ class MangaApp {
     }
 
     setupMobileMenu() {
-        // Mobile menu toggle
         const menuToggle = document.getElementById('mobileMenuToggle');
         const navMenu = document.querySelector('.nav-menu');
         
         if (menuToggle && navMenu) {
-            menuToggle.addEventListener('click', () => {
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
                 navMenu.classList.toggle('mobile-show');
             });
             
-            // Close menu when clicking outside
             document.addEventListener('click', (e) => {
                 if (!menuToggle.contains(e.target) && !navMenu.contains(e.target)) {
                     navMenu.classList.remove('mobile-show');
@@ -45,21 +50,18 @@ class MangaApp {
         try {
             const data = await this.api.getHome();
             
-            // Process new manga
             if (data.new && data.new.data) {
                 this.displayMangaGrid(data.new.data, 'new-manga');
             } else {
                 this.showError('new-manga', 'No new manga data');
             }
             
-            // Process top manga
             if (data.top && data.top.data) {
                 this.displayMangaGrid(data.top.data, 'top-manga');
             } else {
                 this.showError('top-manga', 'No top manga data');
             }
             
-            // Process recommendations
             if (data.recommend && data.recommend.data) {
                 this.displayMangaGrid(data.recommend.data, 'recommend-manga');
             } else {
@@ -94,7 +96,7 @@ class MangaApp {
                     <img src="${coverUrl}" 
                          alt="${title}"
                          loading="lazy"
-                         onerror="this.src='https://via.placeholder.com/300x400/1a1a2e/ffffff?text=Image+Error'">
+                         onerror="this.src='https://via.placeholder.com/300x400/1a1a2e/ffffff?text=No+Image'">
                     <div class="manga-info">
                         <div class="manga-title">${title}</div>
                         <div class="manga-meta">
@@ -106,14 +108,11 @@ class MangaApp {
             `;
         }).join('');
         
-        // Add click events
         container.querySelectorAll('.manga-card').forEach(card => {
             card.addEventListener('click', () => {
                 const mangaId = card.dataset.id;
                 const mangaTitle = card.dataset.title;
                 this.showMangaDetail(mangaId, mangaTitle);
-                
-                // Close mobile menu if open
                 document.querySelector('.nav-menu').classList.remove('mobile-show');
             });
         });
@@ -141,7 +140,6 @@ class MangaApp {
             this.currentManga = data;
             this.renderMangaDetail(data);
             
-            // Load chapters dengan pagination
             this.loadChapters(mangaId);
             
         } catch (error) {
@@ -169,7 +167,6 @@ class MangaApp {
         const viewCount = this.formatNumber(data.view_count || 0);
         const rating = data.user_rate || 'N/A';
         
-        // Extract genres dari taxonomy
         let genres = [];
         if (data.taxonomy && data.taxonomy.Genre) {
             genres = data.taxonomy.Genre.map(g => g.name);
@@ -186,7 +183,6 @@ class MangaApp {
                 <div class="detail-content">
                     <div class="detail-header">
                         <h1 class="detail-title">${title}</h1>
-                        <!-- 🔥 TOMBOL BACK SATU-SATUNYA -->
                         <button class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
                             <i class="fas fa-arrow-left"></i> Back to Home
                         </button>
@@ -235,7 +231,6 @@ class MangaApp {
         `;
         
         try {
-            // Load pertama 100 chapter
             const response = await this.api.request(`v1/chapter/${mangaId}/list`, {
                 page: 1,
                 page_size: 100,
@@ -279,7 +274,6 @@ class MangaApp {
             return;
         }
         
-        // Group by 100s untuk organize
         const groupedChapters = this.groupChapters(chapters);
         
         container.innerHTML = `
@@ -336,12 +330,11 @@ class MangaApp {
             groups[groupName].push(chapter);
         });
         
-        // Sort groups by range
         const sortedGroups = {};
         Object.keys(groups).sort((a, b) => {
             const aStart = parseInt(a.split('-')[0]);
             const bStart = parseInt(b.split('-')[0]);
-            return bStart - aStart; // Descending (newest first)
+            return bStart - aStart;
         }).forEach(key => {
             sortedGroups[key] = groups[key];
         });
@@ -390,14 +383,11 @@ class MangaApp {
             const newChapters = response.data || [];
             console.log(`✅ Loaded ${newChapters.length} more chapters`);
             
-            // Append to existing
             this.chapters = [...this.chapters, ...newChapters];
             const container = document.getElementById('chapter-list-container');
             
-            // Group new chapters
             const groupedNew = this.groupChapters(newChapters);
             
-            // Add new groups
             Object.entries(groupedNew).forEach(([range, chaps]) => {
                 const groupHTML = `
                     <div class="chapter-group">
@@ -411,7 +401,6 @@ class MangaApp {
                 container.insertAdjacentHTML('beforeend', groupHTML);
             });
             
-            // Update pagination button
             const totalPages = response.meta?.total_page || 1;
             const paginationControls = container.querySelector('.pagination-controls');
             
@@ -426,7 +415,6 @@ class MangaApp {
                 paginationControls.innerHTML = '<p class="completed">✅ All chapters loaded</p>';
             }
             
-            // Rebind events for new chapters
             this.bindChapterEvents();
             
         } catch (error) {
@@ -457,11 +445,10 @@ class MangaApp {
             const chapterData = response.data;
             
             if (!chapterData.images || chapterData.images.length === 0) {
-                // Build images from chapter data jika tidak ada
                 if (chapterData.chapter) {
                     const baseUrl = chapterData.base_url || 'https://assets.shngm.id';
                     const path = chapterData.chapter.path;
-                    const imageFiles = chapterData.chapter.data;
+                    const imageFiles = chapterData.chapter.data.filter(img => !img.startsWith('999-'));
                     chapterData.images = imageFiles.map(img => `${baseUrl}${path}${img}`);
                 }
             }
@@ -481,7 +468,6 @@ class MangaApp {
     }
 
     showChapterReader(chapterData) {
-        // Hapus reader sebelumnya jika ada
         const existingReader = document.getElementById('manga-reader');
         if (existingReader) {
             existingReader.remove();
@@ -491,8 +477,8 @@ class MangaApp {
         
         const readerHTML = `
             <div id="manga-reader" class="manga-reader-container">
-                <!-- HEADER -->
-                <div class="reader-header">
+                <!-- 🔥 AUTO-HIDE HEADER -->
+                <div class="reader-header" id="readerHeader">
                     <div class="reader-header-left">
                         <button id="closeReaderBtn" class="close-reader-btn">
                             <i class="fas fa-times"></i> ${isMobile ? 'Close' : 'Close Reader'}
@@ -517,27 +503,56 @@ class MangaApp {
                     </div>
                 </div>
                 
-                <!-- IMAGES -->
-                <div class="reader-images-container">
-                    ${(chapterData.images || []).map((img, idx) => `
-                        <div class="reader-page">
-                            <img src="${img}" 
-                                 alt="Page ${idx + 1}"
-                                 class="reader-image"
-                                 loading="lazy">
-                            <div class="page-number">Page ${idx + 1}</div>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <!-- FOOTER -->
-                <div class="reader-footer">
+                <!-- 🔥 AUTO-HIDE FOOTER -->
+                <div class="reader-footer" id="readerFooter">
                     <div class="reader-footer-info">
                         ${chapterData.images ? chapterData.images.length : 0} pages
                     </div>
                     <button id="backToTopBtn" class="back-to-top-btn">
                         <i class="fas fa-arrow-up"></i> Back to Top
                     </button>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="reader-progress-bar">
+                    <div class="reader-progress-fill" id="readerProgress"></div>
+                </div>
+                
+                <!-- Images -->
+                <div class="reader-images-container" id="readerImages">
+                    ${(chapterData.images || []).map((img, idx) => `
+                        <div class="reader-page" id="page-${idx + 1}">
+                            <img src="${img}" 
+                                 alt="Page ${idx + 1}"
+                                 class="reader-image"
+                                 loading="lazy"
+                                 data-page="${idx + 1}">
+                            <div class="page-number">Page ${idx + 1}</div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <!-- Controls Overlay (Desktop only) -->
+                ${!isMobile ? `
+                    <div class="reader-controls-overlay" id="readerControls">
+                        <button class="reader-control-btn" id="zoomInBtn" title="Zoom In">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <button class="reader-control-btn" id="zoomOutBtn" title="Zoom Out">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                        <button class="reader-control-btn" id="toggleDarkMode" title="Toggle Dark Mode">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        <button class="reader-control-btn" id="fullscreenBtn" title="Fullscreen">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                ` : ''}
+                
+                <!-- Zoom Indicator -->
+                <div class="zoom-indicator" id="zoomIndicator">
+                    Zoom: 100%
                 </div>
             </div>
         `;
@@ -546,15 +561,148 @@ class MangaApp {
         readerDiv.innerHTML = readerHTML;
         document.body.appendChild(readerDiv);
         
-        // 🔥 FIX: Add event listeners dengan BENAR
+        // 🔥 INITIALIZE AUTO-HIDE FUNCTIONALITY
+        this.setupReaderAutoHide();
+        
+        // Setup event listeners
+        this.setupReaderEvents(chapterData);
+        
+        // Preload first few images
+        this.preloadImages(chapterData.images.slice(0, 3));
+    }
+
+    setupReaderAutoHide() {
+        const readerContainer = document.getElementById('manga-reader');
+        const readerHeader = document.getElementById('readerHeader');
+        const readerFooter = document.getElementById('readerFooter');
+        const readerControls = document.getElementById('readerControls');
+        
+        if (!readerContainer || !readerHeader) return;
+        
+        let lastScrollY = window.scrollY;
+        let isScrolling = false;
+        let hideTimeout = null;
+        
+        // Show controls initially
+        if (readerControls) {
+            setTimeout(() => {
+                readerControls.classList.add('show');
+            }, 1000);
+            
+            // Hide controls after 3 seconds
+            setTimeout(() => {
+                if (readerControls) {
+                    readerControls.classList.remove('show');
+                }
+            }, 3000);
+        }
+        
+        // Scroll event for auto-hide
+        readerContainer.addEventListener('scroll', () => {
+            const currentScrollY = readerContainer.scrollTop;
+            const scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+            
+            // Show header when scrolling up
+            if (scrollDirection === 'up' && currentScrollY < lastScrollY - 50) {
+                readerHeader.classList.remove('hidden');
+                readerFooter.classList.remove('hidden');
+                
+                // Show controls briefly
+                if (readerControls) {
+                    readerControls.classList.add('show');
+                    setTimeout(() => {
+                        if (readerControls) readerControls.classList.remove('show');
+                    }, 2000);
+                }
+            }
+            
+            // Hide header when scrolling down
+            if (scrollDirection === 'down' && currentScrollY > lastScrollY + 50) {
+                readerHeader.classList.add('hidden');
+                readerFooter.classList.add('hidden');
+                if (readerControls) readerControls.classList.remove('show');
+            }
+            
+            lastScrollY = currentScrollY;
+            
+            // Update progress bar
+            this.updateReaderProgress();
+            
+            // Clear previous timeout
+            if (hideTimeout) clearTimeout(hideTimeout);
+            
+            // Auto-hide after 3 seconds of no scrolling
+            hideTimeout = setTimeout(() => {
+                if (currentScrollY > 100) { // Only hide if not at top
+                    readerHeader.classList.add('hidden');
+                    readerFooter.classList.add('hidden');
+                }
+                if (readerControls) readerControls.classList.remove('show');
+            }, 3000);
+        });
+        
+        // Mouse move to show controls
+        readerContainer.addEventListener('mousemove', (e) => {
+            if (window.innerWidth > 768) { // Desktop only
+                readerHeader.classList.remove('hidden');
+                readerFooter.classList.remove('hidden');
+                
+                if (readerControls) {
+                    readerControls.classList.add('show');
+                    
+                    // Position controls near mouse
+                    const rect = readerContainer.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    if (readerControls) {
+                        readerControls.style.right = '20px';
+                        readerControls.style.top = `${Math.max(100, Math.min(y, rect.height - 200))}px`;
+                    }
+                    
+                    // Auto-hide controls after 2 seconds
+                    clearTimeout(this.readerState.autoHideTimeout);
+                    this.readerState.autoHideTimeout = setTimeout(() => {
+                        if (readerControls) readerControls.classList.remove('show');
+                    }, 2000);
+                }
+            }
+        });
+        
+        // Touch events for mobile
+        readerContainer.addEventListener('touchstart', () => {
+            readerHeader.classList.remove('hidden');
+            readerFooter.classList.remove('hidden');
+            
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                readerHeader.classList.add('hidden');
+                readerFooter.classList.add('hidden');
+            }, 3000);
+        });
+    }
+
+    updateReaderProgress() {
+        const readerContainer = document.getElementById('manga-reader');
+        const progressBar = document.getElementById('readerProgress');
+        
+        if (!readerContainer || !progressBar) return;
+        
+        const scrollTop = readerContainer.scrollTop;
+        const scrollHeight = readerContainer.scrollHeight - readerContainer.clientHeight;
+        const progress = (scrollTop / scrollHeight) * 100;
+        
+        progressBar.style.width = `${progress}%`;
+    }
+
+    setupReaderEvents(chapterData) {
+        // Close button
         const closeBtn = document.getElementById('closeReaderBtn');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                console.log('Closing reader...');
                 const reader = document.getElementById('manga-reader');
                 if (reader) {
                     reader.remove();
-                    // 🔥 KEMBALI KE DETAIL PAGE
                     this.showSection('detail');
                     window.scrollTo(0, 0);
                 }
@@ -587,28 +735,38 @@ class MangaApp {
         const backToTopBtn = document.getElementById('backToTopBtn');
         if (backToTopBtn) {
             backToTopBtn.addEventListener('click', () => {
-                document.querySelector('.manga-reader-container').scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
+                const reader = document.getElementById('manga-reader');
+                if (reader) {
+                    reader.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
             });
         }
         
-        // Image click zoom
+        // Image zoom
         document.querySelectorAll('.reader-image').forEach(img => {
             img.addEventListener('click', function() {
+                const isZoomed = this.classList.contains('zoomed');
+                
+                // Show zoom indicator
+                const zoomIndicator = document.getElementById('zoomIndicator');
+                if (zoomIndicator) {
+                    zoomIndicator.textContent = `Zoom: ${isZoomed ? '100%' : '150%'}`;
+                    zoomIndicator.classList.add('show');
+                    setTimeout(() => {
+                        zoomIndicator.classList.remove('show');
+                    }, 1000);
+                }
+                
+                // Toggle zoom
                 this.classList.toggle('zoomed');
             });
         });
         
-        // Fullscreen double click
-        readerDiv.addEventListener('dblclick', () => {
-            if (!document.fullscreenElement) {
-                readerDiv.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
-        });
+        // Desktop controls
+        this.setupDesktopControls();
         
         // ESC key to close
         document.addEventListener('keydown', (e) => {
@@ -619,18 +777,104 @@ class MangaApp {
                     this.showSection('detail');
                 }
             }
+            
+            // Spacebar to toggle zoom
+            if (e.key === ' ' && document.querySelector('.reader-image')) {
+                e.preventDefault();
+                const images = document.querySelectorAll('.reader-image');
+                if (images.length > 0) {
+                    const currentImage = this.getCurrentVisibleImage();
+                    if (currentImage) {
+                        currentImage.classList.toggle('zoomed');
+                    }
+                }
+            }
+        });
+        
+        // Fullscreen double click
+        const readerDiv = document.getElementById('manga-reader');
+        if (readerDiv) {
+            readerDiv.addEventListener('dblclick', () => {
+                if (!document.fullscreenElement) {
+                    readerDiv.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+        }
+    }
+
+    setupDesktopControls() {
+        if (window.innerWidth <= 768) return;
+        
+        // Zoom in
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', () => {
+                const currentImage = this.getCurrentVisibleImage();
+                if (currentImage) {
+                    currentImage.classList.add('zoomed');
+                }
+            });
+        }
+        
+        // Zoom out
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', () => {
+                const currentImage = this.getCurrentVisibleImage();
+                if (currentImage) {
+                    currentImage.classList.remove('zoomed');
+                }
+            });
+        }
+        
+        // Fullscreen
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => {
+                const reader = document.getElementById('manga-reader');
+                if (!document.fullscreenElement) {
+                    reader.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+        }
+    }
+
+    getCurrentVisibleImage() {
+        const reader = document.getElementById('manga-reader');
+        if (!reader) return null;
+        
+        const images = document.querySelectorAll('.reader-image');
+        const readerRect = reader.getBoundingClientRect();
+        
+        for (const img of images) {
+            const imgRect = img.getBoundingClientRect();
+            if (imgRect.top >= readerRect.top && imgRect.bottom <= readerRect.bottom) {
+                return img;
+            }
+        }
+        
+        // Return first image if none is fully visible
+        return images.length > 0 ? images[0] : null;
+    }
+
+    preloadImages(imageUrls) {
+        imageUrls.forEach(url => {
+            const img = new Image();
+            img.src = url;
         });
     }
 
     // ==================== UTILITIES ====================
 
     showSection(sectionId) {
-        // Update nav
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.toggle('active', link.dataset.section === sectionId);
         });
         
-        // Show section
         document.querySelectorAll('.content-section').forEach(section => {
             section.classList.remove('active');
         });
@@ -641,7 +885,6 @@ class MangaApp {
             window.scrollTo(0, 0);
         }
         
-        // Close mobile menu if open
         document.querySelector('.nav-menu').classList.remove('mobile-show');
     }
 
@@ -670,10 +913,8 @@ class MangaApp {
     }
 
     showNotification(message, type = 'info') {
-        // Simple notification
         console.log(`[${type.toUpperCase()}] ${message}`);
         
-        // Bisa diganti dengan toast notification nanti
         if (type === 'error') {
             alert(`Error: ${message}`);
         }
@@ -742,7 +983,6 @@ class MangaApp {
         const chapterNum = parseInt(input.value);
         
         if (!isNaN(chapterNum) && chapterNum > 0) {
-            // Scroll to chapter
             const targetItem = document.querySelector(`.chapter-item[data-number="${chapterNum}"]`);
             if (targetItem) {
                 targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -754,7 +994,6 @@ class MangaApp {
     }
 
     bindEvents() {
-        // Navigation
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -762,7 +1001,6 @@ class MangaApp {
             });
         });
         
-        // Search
         const searchBtn = document.getElementById('searchBtn');
         const searchInput = document.getElementById('searchInput');
         
@@ -776,24 +1014,19 @@ class MangaApp {
             });
         }
         
-        // API Test button
         const apiTestBtn = document.getElementById('apiTestBtn');
         if (apiTestBtn) {
             apiTestBtn.addEventListener('click', () => this.checkAPIStatus(true));
         }
         
-        // Window resize untuk mobile
         window.addEventListener('resize', () => {
-            // Update mobile UI jika perlu
             this.handleResize();
         });
     }
     
     handleResize() {
-        // Handle responsive changes
         const isMobile = window.innerWidth <= 768;
         
-        // Update reader jika sedang terbuka
         const reader = document.getElementById('manga-reader');
         if (reader && this.currentChapter) {
             reader.remove();
@@ -839,7 +1072,6 @@ class MangaApp {
     }
 }
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     window.MangaApp = new MangaApp();
 });
