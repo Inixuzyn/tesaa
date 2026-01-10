@@ -572,115 +572,105 @@ class MangaApp {
     }
 
     setupReaderAutoHide() {
-        const readerContainer = document.getElementById('manga-reader');
-        const readerHeader = document.getElementById('readerHeader');
-        const readerFooter = document.getElementById('readerFooter');
-        const readerControls = document.getElementById('readerControls');
+    const readerContainer = document.getElementById('manga-reader');
+    const readerHeader = document.getElementById('readerHeader');
+    const readerFooter = document.getElementById('readerFooter');
+    const readerControls = document.getElementById('readerControls');
+    
+    if (!readerContainer || !readerHeader) return;
+    
+    let isUIVisible = true;
+    let hideTimeout = null;
+    let lastTapTime = 0;
+    
+    const showUI = () => {
+        readerHeader.classList.remove('hidden');
+        readerFooter.classList.remove('hidden');
+        if (readerControls && window.innerWidth > 768) {
+            readerControls.classList.add('show');
+        }
+        isUIVisible = true;
         
-        if (!readerContainer || !readerHeader) return;
-        
-        let lastScrollY = window.scrollY;
-        let isScrolling = false;
-        let hideTimeout = null;
-        
-        // Show controls initially
-        if (readerControls) {
-            setTimeout(() => {
-                readerControls.classList.add('show');
-            }, 1000);
-            
-            // Hide controls after 3 seconds
-            setTimeout(() => {
-                if (readerControls) {
-                    readerControls.classList.remove('show');
-                }
-            }, 3000);
+        // Auto-hide setelah 3 detik
+        if (hideTimeout) clearTimeout(hideTimeout);
+        hideTimeout = setTimeout(() => {
+            hideUI();
+        }, 3000);
+    };
+    
+    const hideUI = () => {
+        readerHeader.classList.add('hidden');
+        readerFooter.classList.add('hidden');
+        if (readerControls) readerControls.classList.remove('show');
+        isUIVisible = false;
+    };
+    
+    const toggleUI = () => {
+        if (isUIVisible) {
+            hideUI();
+        } else {
+            showUI();
+        }
+    };
+    
+    // 🔥 1. Single tap pada area reader (selain gambar) untuk show UI
+    readerContainer.addEventListener('click', (e) => {
+        // Jika klik di gambar, biarkan zoom logic handle
+        if (e.target.closest('.reader-image') || e.target.closest('.page-number')) {
+            return;
         }
         
-        // Scroll event for auto-hide
-        readerContainer.addEventListener('scroll', () => {
-            const currentScrollY = readerContainer.scrollTop;
-            const scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
-            
-            // Show header when scrolling up
-            if (scrollDirection === 'up' && currentScrollY < lastScrollY - 50) {
-                readerHeader.classList.remove('hidden');
-                readerFooter.classList.remove('hidden');
-                
-                // Show controls briefly
-                if (readerControls) {
-                    readerControls.classList.add('show');
-                    setTimeout(() => {
-                        if (readerControls) readerControls.classList.remove('show');
-                    }, 2000);
-                }
-            }
-            
-            // Hide header when scrolling down
-            if (scrollDirection === 'down' && currentScrollY > lastScrollY + 50) {
-                readerHeader.classList.add('hidden');
-                readerFooter.classList.add('hidden');
-                if (readerControls) readerControls.classList.remove('show');
-            }
-            
-            lastScrollY = currentScrollY;
-            
-            // Update progress bar
-            this.updateReaderProgress();
-            
-            // Clear previous timeout
-            if (hideTimeout) clearTimeout(hideTimeout);
-            
-            // Auto-hide after 3 seconds of no scrolling
-            hideTimeout = setTimeout(() => {
-                if (currentScrollY > 100) { // Only hide if not at top
-                    readerHeader.classList.add('hidden');
-                    readerFooter.classList.add('hidden');
-                }
-                if (readerControls) readerControls.classList.remove('show');
-            }, 3000);
-        });
+        const currentTime = Date.now();
+        const timeSinceLastTap = currentTime - lastTapTime;
         
-        // Mouse move to show controls
-        readerContainer.addEventListener('mousemove', (e) => {
-            if (window.innerWidth > 768) { // Desktop only
-                readerHeader.classList.remove('hidden');
-                readerFooter.classList.remove('hidden');
-                
-                if (readerControls) {
-                    readerControls.classList.add('show');
-                    
-                    // Position controls near mouse
-                    const rect = readerContainer.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    
-                    if (readerControls) {
-                        readerControls.style.right = '20px';
-                        readerControls.style.top = `${Math.max(100, Math.min(y, rect.height - 200))}px`;
-                    }
-                    
-                    // Auto-hide controls after 2 seconds
-                    clearTimeout(this.readerState.autoHideTimeout);
-                    this.readerState.autoHideTimeout = setTimeout(() => {
-                        if (readerControls) readerControls.classList.remove('show');
-                    }, 2000);
-                }
-            }
-        });
+        if (timeSinceLastTap < 300) {
+            // 🔥 2. Double tap cepat untuk toggle UI
+            toggleUI();
+        } else {
+            // 🔥 3. Single tap untuk show UI
+            showUI();
+        }
         
-        // Touch events for mobile
-        readerContainer.addEventListener('touchstart', () => {
-            readerHeader.classList.remove('hidden');
-            readerFooter.classList.remove('hidden');
+        lastTapTime = currentTime;
+    });
+    
+    // 🔥 4. Mouse move untuk desktop show UI
+    if (window.innerWidth > 768) {
+        let mouseMoveTimer;
+        readerContainer.addEventListener('mousemove', () => {
+            clearTimeout(mouseMoveTimer);
+            showUI();
             
-            clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(() => {
-                readerHeader.classList.add('hidden');
-                readerFooter.classList.add('hidden');
-            }, 3000);
+            // Quick hide setelah mouse berhenti
+            mouseMoveTimer = setTimeout(() => {
+                if (isUIVisible) {
+                    hideUI();
+                }
+            }, 1000);
         });
     }
+    
+    // 🔥 5. ESC key untuk show UI
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (!isUIVisible) {
+                showUI();
+            } else {
+                hideUI();
+            }
+        }
+    });
+    
+    // 🔥 6. Auto-hide awal
+    hideTimeout = setTimeout(() => {
+        hideUI();
+    }, 3000);
+    
+    // Update progress
+    readerContainer.addEventListener('scroll', () => {
+        this.updateReaderProgress();
+    });
+}
 
     updateReaderProgress() {
         const readerContainer = document.getElementById('manga-reader');
