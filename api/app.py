@@ -20,6 +20,7 @@ HEADERS = {
 def add_cors(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     return response
 
 # ==================== HELPER ====================
@@ -28,17 +29,29 @@ def fetch_shinigami(endpoint, params=None):
     url = f"{BASE_URL}/{endpoint.lstrip('/')}"
     
     try:
+        print(f"[API] Fetching: {url}")
+        if params:
+            print(f"[API] Params: {params}")
+        
         response = SESSION.get(url, headers=HEADERS, params=params, timeout=15)
         
         if response.status_code == 200:
             return response.json()
         else:
+            print(f"[API] Error: HTTP {response.status_code}")
             return {
                 "retcode": response.status_code,
                 "message": f"HTTP {response.status_code}",
                 "data": None
             }
+    except requests.exceptions.Timeout:
+        return {
+            "retcode": 408,
+            "message": "Request timeout",
+            "data": None
+        }
     except Exception as e:
+        print(f"[API] Exception: {str(e)}")
         return {
             "retcode": 500,
             "message": str(e),
@@ -54,9 +67,12 @@ def ping():
 def health():
     try:
         test = SESSION.get(BASE_URL, timeout=5)
+        api_status = "connected" if test.status_code == 200 else "disconnected"
+        
         return jsonify({
             "status": "healthy",
-            "api": "connected" if test.status_code == 200 else "disconnected"
+            "api": api_status,
+            "timestamp": int(time.time())
         })
     except:
         return jsonify({"status": "error", "api": "disconnected"})
@@ -79,19 +95,19 @@ def home():
     new_data = fetch_shinigami('/v1/manga/list', new_params)
     result['new'] = new_data
     
-    # Top manga (gunakan type=project, sort=latest karena ga ada sort=popular)
+    # Top manga
     top_params = {
         'type': 'project',
         'page': 1,
         'page_size': 12,
         'is_update': 'true',
-        'sort': 'latest',  # NOTE: API mungkin tidak support 'popular'
+        'sort': 'latest',
         'sort_order': 'desc'
     }
     top_data = fetch_shinigami('/v1/manga/list', top_params)
     result['top'] = top_data
     
-    # Recommendations (type=mirror)
+    # Recommendations
     rec_params = {
         'type': 'mirror',
         'page': 1,
@@ -126,14 +142,13 @@ def manga_list():
 @app.route('/api/v1/manga/detail/<manga_id>')
 def manga_detail(manga_id):
     """Get manga detail - HANYA V1 YANG BEKERJA!"""
+    print(f"[API] Fetching manga detail: {manga_id}")
     data = fetch_shinigami(f'/v1/manga/detail/{manga_id}')
     
-    # Jika error, beri fallback
     if data.get('retcode') != 0:
-        # Legacy endpoint sudah mati, jadi return error
         return jsonify({
             "retcode": 404,
-            "message": "Manga not found or legacy API is deprecated",
+            "message": "Manga not found",
             "data": None
         })
     
@@ -142,21 +157,32 @@ def manga_detail(manga_id):
 # ==================== CHAPTER LIST ====================
 @app.route('/api/v1/chapter/<manga_id>/list')
 def chapter_list(manga_id):
-    """Get chapter list untuk manga"""
+    """Get chapter list untuk manga - FIX PAGINATION"""
+    page = request.args.get('page', 1, type=int)
+    page_size = request.args.get('page_size', 100, type=int)  # 🔥 UBAH KE 100
+    
     params = {
-        'page': request.args.get('page', 1, type=int),
-        'page_size': request.args.get('page_size', 24, type=int),
-        'sort_by': request.args.get('sort_by', 'chapter_number'),
-        'sort_order': request.args.get('sort_order', 'desc')
+        'page': page,
+        'page_size': page_size,
+        'sort_by': 'chapter_number',
+        'sort_order': 'desc'
     }
     
+    print(f"[API] Fetching chapters for {manga_id}, page {page}, size {page_size}")
     data = fetch_shinigami(f'/v1/chapter/{manga_id}/list', params)
+    
+    # Log info untuk debugging
+    if data.get('retcode') == 0 and data.get('meta'):
+        meta = data['meta']
+        print(f"[API] Chapter info: Page {page}/{meta.get('total_page', 1)}, Total: {meta.get('total_record', 0)}")
+    
     return jsonify(data)
 
 # ==================== CHAPTER DETAIL ====================
 @app.route('/api/v1/chapter/detail/<chapter_id>')
 def chapter_detail(chapter_id):
     """Get chapter detail dengan gambar"""
+    print(f"[API] Fetching chapter detail: {chapter_id}")
     data = fetch_shinigami(f'/v1/chapter/detail/{chapter_id}')
     
     # Format ulang images jika perlu
@@ -168,7 +194,10 @@ def chapter_detail(chapter_id):
             chapter_path = chapter_data['chapter']['path']
             image_files = chapter_data['chapter']['data']
             
-            images = [f"{base_url}{chapter_path}{img}" for img in image_files]
+            # Filter out non-image files (like 999-*.jpg)
+            valid_images = [img for img in image_files if not img.startswith('999-')]
+            
+            images = [f"{base_url}{chapter_path}{img}" for img in valid_images]
             chapter_data['images'] = images
     
     return jsonify(data)
@@ -241,4 +270,4 @@ def not_found(e):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
