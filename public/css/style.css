@@ -809,29 +809,36 @@ body {
 
 /* Reader Images Container */
 .reader-images-container {
-    padding: 20px;
+    padding: 20px 10px;
     text-align: center;
-    max-width: 1200px;
     margin: 80px auto 60px;
     padding-top: 100px;
+    max-width: none !important; /* 🔥 HAPUS MAX WIDTH */
+    width: 100%;
 }
 
 .reader-page {
     margin-bottom: 20px;
     position: relative;
-    max-width: 100%;
-    margin-left: auto;
-    margin-right: auto;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
+/* 🔥 GAMBAR BESAR - FIXED */
 .reader-image {
-    max-width: 100%;
-    max-height: 90vh;
-    border-radius: 5px;
+    width: auto !important;
+    height: auto !important;
+    max-width: 100% !important;
+    max-height: none !important; /* 🔥 HAPUS MAX HEIGHT */
+    min-height: 500px; /* 🔥 MINIMAL TINGGI */
+    border-radius: 0; /* 🔥 HAPUS BORDER RADIUS */
     cursor: pointer;
     transition: transform 0.3s ease;
-    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
     background: #1a1a1a;
+    display: block;
+    margin: 0 auto;
 }
 
 .reader-image:hover {
