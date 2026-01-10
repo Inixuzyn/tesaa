@@ -16,6 +16,14 @@
       "dest": "/api/app.py"
     },
     {
+      "src": "/ping",
+      "dest": "/api/app.py"
+    },
+    {
+      "src": "/health",
+      "dest": "/api/app.py"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/$1"
     }
@@ -30,9 +38,23 @@
         },
         {
           "key": "Access-Control-Allow-Methods",
-          "value": "GET,OPTIONS"
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-Requested-With, Content-Type, Accept"
         }
       ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/app.py"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/public/:path*"
     }
   ]
 }
