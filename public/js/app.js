@@ -1,6 +1,6 @@
 /**
  * Manga App - COMPLETE VERSION
- * Includes: Chapter pagination, reader close fix, single back button, Mobile responsive, Toggle button for reader header
+ * Includes: Single page chapter list, Big reader images, No zoom, Toggle button
  */
 
 class MangaApp {
@@ -9,6 +9,7 @@ class MangaApp {
         this.currentManga = null;
         this.currentChapter = null;
         this.chapters = [];
+        this.chapterSortOrder = 'desc'; // 'asc' or 'desc'
         this.init();
     }
 
@@ -134,7 +135,8 @@ class MangaApp {
             this.currentManga = data;
             this.renderMangaDetail(data);
             
-            this.loadChapters(mangaId);
+            // Load SEMUA chapters dalam satu page
+            await this.loadAllChapters(mangaId);
             
         } catch (error) {
             console.error('❌ Error loading manga detail:', error);
@@ -195,23 +197,53 @@ class MangaApp {
                     </div>
                     
                     <div class="detail-description">
-                        <h3>Description</h3>
+                        <h3><i class="fas fa-align-left"></i> Description</h3>
                         <p>${description}</p>
                     </div>
-                    
-                    <div class="chapter-list">
-                        <h3><i class="fas fa-list"></i> Chapters</h3>
-                        <div id="chapter-list-container" class="chapter-grid">
-                            <div class="loading">Loading chapters...</div>
+                </div>
+            </div>
+            
+            <div class="chapter-list-section">
+                <div class="chapter-list-header">
+                    <h3><i class="fas fa-list"></i> All Chapters</h3>
+                    <div class="chapter-controls">
+                        <div class="chapter-search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="chapterSearch" 
+                                   placeholder="Search chapter number or title..."
+                                   onkeyup="window.MangaApp.searchChapter(this.value)">
                         </div>
+                        <button class="chapter-filter-btn ${this.chapterSortOrder === 'desc' ? 'active' : ''}" 
+                                onclick="window.MangaApp.toggleChapterSort('desc')">
+                            <i class="fas fa-sort-numeric-down"></i> Newest
+                        </button>
+                        <button class="chapter-filter-btn ${this.chapterSortOrder === 'asc' ? 'active' : ''}" 
+                                onclick="window.MangaApp.toggleChapterSort('asc')">
+                            <i class="fas fa-sort-numeric-up"></i> Oldest
+                        </button>
                     </div>
+                </div>
+                
+                <div class="chapter-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-book"></i>
+                        <span id="totalChaptersCount">0</span> Chapters
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-eye"></i>
+                        <span id="totalViewsCount">0</span> Total Views
+                    </div>
+                </div>
+                
+                <div id="chapter-list-container" class="chapter-grid-container">
+                    <div class="loading">Loading all chapters...</div>
                 </div>
             </div>
         `;
     }
 
-    async loadChapters(mangaId) {
-        console.log(`📚 Loading chapters for manga: ${mangaId}`);
+    async loadAllChapters(mangaId) {
+        console.log(`📚 Loading ALL chapters for manga: ${mangaId}`);
         
         const container = document.getElementById('chapter-list-container');
         if (!container) return;
@@ -219,31 +251,60 @@ class MangaApp {
         container.innerHTML = `
             <div class="loading-chapters">
                 <div class="spinner"></div>
-                <p>Loading chapters...</p>
-                <p class="loading-info" id="loadingInfo">Fetching chapter list</p>
+                <p>Loading all chapters...</p>
+                <p class="loading-info">Please wait, loading all chapters in one page</p>
             </div>
         `;
         
         try {
-            const response = await this.api.request(`v1/chapter/${mangaId}/list`, {
-                page: 1,
-                page_size: 100,
-                sort_by: 'chapter_number',
-                sort_order: 'desc'
-            });
+            // Load SEMUA chapters tanpa pagination
+            let allChapters = [];
+            let page = 1;
+            let hasMore = true;
             
-            if (response.retcode !== 0) {
-                throw new Error(response.message || 'Failed to load chapters');
+            while (hasMore) {
+                console.log(`Loading chapter page ${page}...`);
+                
+                const response = await this.api.request(`v1/chapter/${mangaId}/list`, {
+                    page: page,
+                    page_size: 100, // Load 100 per page
+                    sort_by: 'chapter_number',
+                    sort_order: 'desc'
+                });
+                
+                if (response.retcode !== 0) {
+                    throw new Error(response.message || 'Failed to load chapters');
+                }
+                
+                const chapters = response.data || [];
+                allChapters = [...allChapters, ...chapters];
+                
+                // Check if there are more pages
+                const meta = response.meta || {};
+                const totalPages = meta.total_page || 1;
+                
+                if (page >= totalPages || chapters.length === 0) {
+                    hasMore = false;
+                } else {
+                    page++;
+                    // Update loading text
+                    const loadingInfo = container.querySelector('.loading-info');
+                    if (loadingInfo) {
+                        loadingInfo.textContent = `Loaded ${allChapters.length} chapters...`;
+                    }
+                }
+                
+                // Safety limit: max 10 pages (1000 chapters)
+                if (page > 10) {
+                    console.log('⚠️ Safety limit: Loaded max 10 pages (1000 chapters)');
+                    hasMore = false;
+                }
             }
             
-            const chapters = response.data || [];
-            const totalChapters = response.meta?.total_record || chapters.length;
-            const totalPages = response.meta?.total_page || 1;
+            console.log(`✅ Loaded ${allChapters.length} total chapters`);
             
-            console.log(`📊 Loaded ${chapters.length} of ${totalChapters} chapters (Page 1/${totalPages})`);
-            
-            this.chapters = chapters;
-            this.displayChaptersWithPagination(chapters, totalChapters, totalPages, mangaId);
+            this.chapters = allChapters;
+            this.displayAllChapters(allChapters);
             
         } catch (error) {
             console.error('Error loading chapters:', error);
@@ -251,7 +312,7 @@ class MangaApp {
                 <div class="error">
                     <i class="fas fa-exclamation-circle"></i>
                     <p>Failed to load chapters: ${error.message}</p>
-                    <button onclick="window.MangaApp.loadChapters('${mangaId}')" class="retry-btn">
+                    <button onclick="window.MangaApp.loadAllChapters('${mangaId}')" class="retry-btn">
                         <i class="fas fa-redo"></i> Try Again
                     </button>
                 </div>
@@ -259,54 +320,69 @@ class MangaApp {
         }
     }
 
-    displayChaptersWithPagination(chapters, totalChapters, totalPages, mangaId) {
+    displayAllChapters(chapters) {
         const container = document.getElementById('chapter-list-container');
         if (!container) return;
         
-        if (chapters.length === 0) {
+        if (!chapters || chapters.length === 0) {
             container.innerHTML = '<div class="no-chapters">No chapters available</div>';
             return;
         }
         
-        const groupedChapters = this.groupChapters(chapters);
+        // Update stats
+        const totalChapters = chapters.length;
+        const totalViews = chapters.reduce((sum, chapter) => sum + (chapter.view_count || 0), 0);
         
-        container.innerHTML = `
-            <div class="chapter-list-header">
-                <h3><i class="fas fa-list"></i> All Chapters</h3>
-                <div class="chapter-stats">
-                    <span class="stat-item">📚 ${totalChapters} Chapters</span>
-                    <span class="stat-item">📄 ${totalPages} Pages</span>
-                </div>
-            </div>
+        document.getElementById('totalChaptersCount').textContent = this.formatNumber(totalChapters);
+        document.getElementById('totalViewsCount').textContent = this.formatNumber(totalViews);
+        
+        // Sort chapters berdasarkan current sort order
+        const sortedChapters = [...chapters].sort((a, b) => {
+            const aNum = a.chapter_number || 0;
+            const bNum = b.chapter_number || 0;
             
-            <div class="chapter-search-container">
-                <input type="text" id="chapterSearch" 
-                       placeholder="Search chapter number..." 
-                       onkeyup="window.MangaApp.searchChapter(this.value)">
-                <button onclick="window.MangaApp.jumpToChapter()" class="jump-btn">
-                    <i class="fas fa-search"></i> Jump
-                </button>
-            </div>
-            
-            ${Object.entries(groupedChapters).map(([range, chaps]) => `
-                <div class="chapter-group">
-                    <h4 class="group-title">Chapters ${range}</h4>
-                    <div class="chapter-grid">
-                        ${chaps.map(chapter => this.renderChapterItem(chapter)).join('')}
+            if (this.chapterSortOrder === 'desc') {
+                return bNum - aNum; // Newest first
+            } else {
+                return aNum - bNum; // Oldest first
+            }
+        });
+        
+        // Group by 100s untuk organize
+        const groupedChapters = this.groupChapters(sortedChapters);
+        
+        let chaptersHTML = '';
+        
+        // Jika banyak chapter, buat groups
+        if (Object.keys(groupedChapters).length > 1) {
+            Object.entries(groupedChapters).forEach(([range, chaps]) => {
+                chaptersHTML += `
+                    <div class="chapter-group">
+                        <div class="group-title">
+                            <i class="fas fa-folder"></i>
+                            Chapters ${range}
+                            <span class="stat-item" style="margin-left: auto; font-size: 0.8rem;">
+                                ${chaps.length} chapters
+                            </span>
+                        </div>
+                        <div class="chapter-grid">
+                            ${chaps.map(chapter => this.renderChapterItem(chapter)).join('')}
+                        </div>
                     </div>
+                `;
+            });
+        } else {
+            // Jika sedikit, langsung tampilkan tanpa grouping
+            chaptersHTML = `
+                <div class="chapter-grid">
+                    ${sortedChapters.map(chapter => this.renderChapterItem(chapter)).join('')}
                 </div>
-            `).join('')}
-            
-            ${totalPages > 1 ? `
-                <div class="pagination-controls">
-                    <p>Showing ${chapters.length} of ${totalChapters} chapters</p>
-                    <button onclick="window.MangaApp.loadMoreChapters('${mangaId}', 2)" class="load-more-btn">
-                        <i class="fas fa-plus-circle"></i> Load More Chapters
-                    </button>
-                </div>
-            ` : ''}
-        `;
+            `;
+        }
         
+        container.innerHTML = chaptersHTML;
+        
+        // Add click events
         this.bindChapterEvents();
     }
 
@@ -324,11 +400,17 @@ class MangaApp {
             groups[groupName].push(chapter);
         });
         
+        // Sort groups by range
         const sortedGroups = {};
         Object.keys(groups).sort((a, b) => {
             const aStart = parseInt(a.split('-')[0]);
             const bStart = parseInt(b.split('-')[0]);
-            return bStart - aStart;
+            
+            if (this.chapterSortOrder === 'desc') {
+                return bStart - aStart; // Newest first
+            } else {
+                return aStart - bStart; // Oldest first
+            }
         }).forEach(key => {
             sortedGroups[key] = groups[key];
         });
@@ -343,13 +425,21 @@ class MangaApp {
         const date = this.formatDate(chapter.release_date);
         const views = this.formatNumber(chapter.view_count || 0);
         
+        // Check if chapter is new (released within last 7 days)
+        const isNew = this.isNewChapter(chapter.release_date);
+        const chapterClass = isNew ? 'chapter-item new' : 'chapter-item';
+        
         return `
-            <div class="chapter-item" data-id="${chapterId}" data-number="${chapterNum}">
+            <div class="${chapterClass}" data-id="${chapterId}" data-number="${chapterNum}">
                 <div class="chapter-info">
                     <div class="chapter-title">${title}</div>
+                    ${chapter.chapter_subtitle ? `
+                        <div class="chapter-subtitle">${chapter.chapter_subtitle}</div>
+                    ` : ''}
                     <div class="chapter-meta">
                         <span class="chapter-date">📅 ${date}</span>
                         <span class="chapter-views">👁️ ${views}</span>
+                        ${isNew ? '<span class="new-badge" style="color: #ff416c; font-size: 0.8rem;">NEW</span>' : ''}
                     </div>
                 </div>
                 <div class="chapter-action">
@@ -359,62 +449,55 @@ class MangaApp {
         `;
     }
 
-    async loadMoreChapters(mangaId, page) {
-        console.log(`📄 Loading more chapters, page ${page}...`);
+    isNewChapter(dateString) {
+        if (!dateString) return false;
         
-        try {
-            const response = await this.api.request(`v1/chapter/${mangaId}/list`, {
-                page: page,
-                page_size: 100,
-                sort_by: 'chapter_number',
-                sort_order: 'desc'
-            });
-            
-            if (response.retcode !== 0) {
-                throw new Error(response.message || 'Failed to load more chapters');
-            }
-            
-            const newChapters = response.data || [];
-            console.log(`✅ Loaded ${newChapters.length} more chapters`);
-            
-            this.chapters = [...this.chapters, ...newChapters];
-            const container = document.getElementById('chapter-list-container');
-            
-            const groupedNew = this.groupChapters(newChapters);
-            
-            Object.entries(groupedNew).forEach(([range, chaps]) => {
-                const groupHTML = `
-                    <div class="chapter-group">
-                        <h4 class="group-title">Chapters ${range}</h4>
-                        <div class="chapter-grid">
-                            ${chaps.map(chapter => this.renderChapterItem(chapter)).join('')}
-                        </div>
-                    </div>
-                `;
-                
-                container.insertAdjacentHTML('beforeend', groupHTML);
-            });
-            
-            const totalPages = response.meta?.total_page || 1;
-            const paginationControls = container.querySelector('.pagination-controls');
-            
-            if (paginationControls && page < totalPages) {
-                paginationControls.innerHTML = `
-                    <button onclick="window.MangaApp.loadMoreChapters('${mangaId}', ${page + 1})" 
-                            class="load-more-btn">
-                        <i class="fas fa-plus-circle"></i> Load More (Page ${page + 1}/${totalPages})
-                    </button>
-                `;
-            } else if (paginationControls) {
-                paginationControls.innerHTML = '<p class="completed">✅ All chapters loaded</p>';
-            }
-            
-            this.bindChapterEvents();
-            
-        } catch (error) {
-            console.error('Error loading more chapters:', error);
-            this.showNotification(`Failed to load more chapters: ${error.message}`, 'error');
+        const chapterDate = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - chapterDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return diffDays <= 7; // New if within 7 days
+    }
+
+    toggleChapterSort(order) {
+        this.chapterSortOrder = order;
+        
+        // Update active button
+        document.querySelectorAll('.chapter-filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        document.querySelector(`.chapter-filter-btn[onclick*="${order}"]`).classList.add('active');
+        
+        // Re-render chapters dengan sort baru
+        if (this.chapters.length > 0) {
+            this.displayAllChapters(this.chapters);
         }
+    }
+
+    searchChapter(query) {
+        const searchTerm = query.toLowerCase().trim();
+        const allItems = document.querySelectorAll('.chapter-item');
+        
+        if (!searchTerm) {
+            // Show all jika search kosong
+            allItems.forEach(item => {
+                item.style.display = 'flex';
+            });
+            return;
+        }
+        
+        allItems.forEach(item => {
+            const chapterNum = item.dataset.number || '';
+            const title = item.querySelector('.chapter-title').textContent.toLowerCase();
+            
+            if (chapterNum.includes(searchTerm) || title.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
     }
 
     bindChapterEvents() {
@@ -471,7 +554,7 @@ class MangaApp {
         
         const readerHTML = `
             <div id="manga-reader" class="manga-reader-container">
-                <!-- 🔥 TOGGLE BUTTON -->
+                <!-- TOGGLE BUTTON -->
                 <button class="reader-toggle-btn" id="toggleUIButton" title="Show/Hide Controls">
                     <i class="fas fa-eye"></i>
                 </button>
@@ -517,23 +600,13 @@ class MangaApp {
                     <div class="reader-progress-fill" id="readerProgress"></div>
                 </div>
                 
-                <!-- Images -->
+                <!-- Images Container -->
                 <div class="reader-images-container" id="readerImages">
-                    ${(chapterData.images || []).map((img, idx) => `
-                        <div class="reader-page" id="page-${idx + 1}">
-                            <img src="${img}" 
-                                 alt="Page ${idx + 1}"
-                                 class="reader-image"
-                                 loading="lazy"
-                                 data-page="${idx + 1}">
-                            <div class="page-number">Page ${idx + 1}</div>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <!-- Zoom Indicator -->
-                <div class="zoom-indicator" id="zoomIndicator">
-                    Zoom: 100%
+                    <!-- Images akan diload -->
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading chapter images...</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -542,14 +615,14 @@ class MangaApp {
         readerDiv.innerHTML = readerHTML;
         document.body.appendChild(readerDiv);
         
-        // 🔥 SETUP TOGGLE BUTTON LOGIC
+        // SETUP TOGGLE BUTTON LOGIC
         this.setupReaderToggle();
+        
+        // LOAD IMAGES
+        this.loadReaderImages(chapterData.images);
         
         // Setup event listeners
         this.setupReaderEvents(chapterData);
-        
-        // Preload images
-        this.preloadImages(chapterData.images.slice(0, 3));
         
         // Update progress bar on scroll
         const readerContainer = document.getElementById('manga-reader');
@@ -557,6 +630,60 @@ class MangaApp {
             readerContainer.addEventListener('scroll', () => {
                 this.updateReaderProgress();
             });
+        }
+    }
+
+    async loadReaderImages(imageUrls) {
+        const imagesContainer = document.getElementById('readerImages');
+        if (!imagesContainer || !imageUrls || imageUrls.length === 0) {
+            imagesContainer.innerHTML = '<div class="error">No images found</div>';
+            return;
+        }
+        
+        let imagesHTML = '';
+        const totalImages = imageUrls.length;
+        
+        // Load semua gambar sekaligus
+        for (let i = 0; i < totalImages; i++) {
+            const imgUrl = imageUrls[i];
+            const pageNum = i + 1;
+            
+            imagesHTML += `
+                <div class="reader-page" id="page-${pageNum}">
+                    <img src="${imgUrl}" 
+                         alt="Page ${pageNum}"
+                         class="reader-image loading-img"
+                         loading="${i < 3 ? 'eager' : 'lazy'}"
+                         data-page="${pageNum}"
+                         onload="window.MangaApp.handleImageLoad(this)"
+                         onerror="this.onerror=null; this.src='https://via.placeholder.com/800x1200/333/ccc?text=Page+${pageNum}'">
+                    <div class="page-number">Page ${pageNum}</div>
+                </div>
+            `;
+        }
+        
+        imagesContainer.innerHTML = imagesHTML;
+        
+        // Preload first 3 images immediately
+        for (let i = 0; i < Math.min(3, totalImages); i++) {
+            const img = new Image();
+            img.src = imageUrls[i];
+        }
+    }
+
+    handleImageLoad(imgElement) {
+        imgElement.classList.remove('loading-img');
+        
+        // Deteksi orientation untuk styling
+        const width = imgElement.naturalWidth || imgElement.width;
+        const height = imgElement.naturalHeight || imgElement.height;
+        
+        if (width > height) {
+            // Landscape
+            imgElement.classList.add('landscape');
+        } else {
+            // Portrait
+            imgElement.classList.add('portrait');
         }
     }
 
@@ -591,12 +718,19 @@ class MangaApp {
         // Click toggle button
         toggleBtn.addEventListener('click', toggleUI);
         
-        // ESC key juga bisa toggle
+        // ESC key untuk toggle
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' || e.key === 'h' || e.key === 'H') {
                 toggleUI();
             }
         });
+        
+        // Auto-hide setelah 5 detik
+        setTimeout(() => {
+            if (isUIVisible) {
+                toggleUI();
+            }
+        }, 5000);
     }
 
     setupReaderEvents(chapterData) {
@@ -649,28 +783,9 @@ class MangaApp {
             });
         }
         
-        // Image zoom
-        document.querySelectorAll('.reader-image').forEach(img => {
-            img.addEventListener('click', function() {
-                const isZoomed = this.classList.contains('zoomed');
-                
-                // Show zoom indicator
-                const zoomIndicator = document.getElementById('zoomIndicator');
-                if (zoomIndicator) {
-                    zoomIndicator.textContent = `Zoom: ${isZoomed ? '100%' : '150%'}`;
-                    zoomIndicator.classList.add('show');
-                    setTimeout(() => {
-                        zoomIndicator.classList.remove('show');
-                    }, 1000);
-                }
-                
-                // Toggle zoom
-                this.classList.toggle('zoomed');
-            });
-        });
-        
-        // ESC key to close
+        // Keyboard navigation
         document.addEventListener('keydown', (e) => {
+            // ESC untuk close reader
             if (e.key === 'Escape') {
                 const reader = document.getElementById('manga-reader');
                 if (reader) {
@@ -678,9 +793,48 @@ class MangaApp {
                     this.showSection('detail');
                 }
             }
+            
+            // Arrow keys untuk navigation
+            if (e.key === 'ArrowRight') {
+                const nextBtn = document.getElementById('nextChapterBtn');
+                if (nextBtn && !nextBtn.disabled) {
+                    nextBtn.click();
+                }
+            }
+            
+            if (e.key === 'ArrowLeft') {
+                const prevBtn = document.getElementById('prevChapterBtn');
+                if (prevBtn && !prevBtn.disabled) {
+                    prevBtn.click();
+                }
+            }
+            
+            // Space untuk scroll down
+            if (e.key === ' ' || e.key === 'PageDown') {
+                e.preventDefault();
+                const reader = document.getElementById('manga-reader');
+                if (reader) {
+                    reader.scrollBy({
+                        top: window.innerHeight * 0.8,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+            
+            // Shift+Space atau PageUp untuk scroll up
+            if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) {
+                e.preventDefault();
+                const reader = document.getElementById('manga-reader');
+                if (reader) {
+                    reader.scrollBy({
+                        top: -window.innerHeight * 0.8,
+                        behavior: 'smooth'
+                    });
+                }
+            }
         });
         
-        // Fullscreen double click
+        // Double click untuk fullscreen
         const readerDiv = document.getElementById('manga-reader');
         if (readerDiv) {
             readerDiv.addEventListener('dblclick', () => {
@@ -704,13 +858,6 @@ class MangaApp {
         const progress = (scrollTop / scrollHeight) * 100;
         
         progressBar.style.width = `${progress}%`;
-    }
-
-    preloadImages(imageUrls) {
-        imageUrls.forEach(url => {
-            const img = new Image();
-            img.src = url;
-        });
     }
 
     // ==================== UTILITIES ====================
@@ -807,37 +954,6 @@ class MangaApp {
         });
     }
 
-    searchChapter(query) {
-        const searchTerm = query.toLowerCase();
-        const allItems = document.querySelectorAll('.chapter-item');
-        
-        allItems.forEach(item => {
-            const chapterNum = item.dataset.number || '';
-            const title = item.querySelector('.chapter-title').textContent.toLowerCase();
-            
-            if (chapterNum.includes(searchTerm) || title.includes(searchTerm)) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-    }
-
-    jumpToChapter() {
-        const input = document.getElementById('chapterSearch');
-        const chapterNum = parseInt(input.value);
-        
-        if (!isNaN(chapterNum) && chapterNum > 0) {
-            const targetItem = document.querySelector(`.chapter-item[data-number="${chapterNum}"]`);
-            if (targetItem) {
-                targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                targetItem.style.animation = 'highlight 2s ease';
-            } else {
-                alert(`Chapter ${chapterNum} not found in current view. Try loading more chapters.`);
-            }
-        }
-    }
-
     bindEvents() {
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -870,10 +986,10 @@ class MangaApp {
     }
     
     handleResize() {
-        const isMobile = window.innerWidth <= 768;
-        
+        // Handle responsive changes jika perlu
         const reader = document.getElementById('manga-reader');
         if (reader && this.currentChapter) {
+            // Re-init reader pada resize
             reader.remove();
             this.showChapterReader(this.currentChapter);
         }
@@ -917,6 +1033,7 @@ class MangaApp {
     }
 }
 
+// Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     window.MangaApp = new MangaApp();
 });
