@@ -1,15 +1,19 @@
 /**
- * Manga App - FIXED FOR SHINIGAMI V1 API
+ * Manga App - COMPLETE FIXED VERSION
+ * Includes: Chapter pagination, reader close fix, single back button
  */
 
 class MangaApp {
     constructor() {
         this.api = window.ShinigamiAPI;
+        this.currentManga = null;
+        this.currentChapter = null;
+        this.chapters = [];
         this.init();
     }
 
     init() {
-        console.log('🚀 Initializing with Shinigami V1 API');
+        console.log('🚀 Initializing Manga App...');
         this.bindEvents();
         this.loadHomeData();
         this.checkAPIStatus();
@@ -22,19 +26,21 @@ class MangaApp {
             const data = await this.api.getHome();
             console.log('Home data:', data);
             
-            // Pastikan kita akses data.data (karena response {data: [...]})
+            // Process new manga
             if (data.new && data.new.data) {
                 this.displayMangaGrid(data.new.data, 'new-manga');
             } else {
                 this.showError('new-manga', 'No new manga data');
             }
             
+            // Process top manga
             if (data.top && data.top.data) {
                 this.displayMangaGrid(data.top.data, 'top-manga');
             } else {
                 this.showError('top-manga', 'No top manga data');
             }
             
+            // Process recommendations
             if (data.recommend && data.recommend.data) {
                 this.displayMangaGrid(data.recommend.data, 'recommend-manga');
             } else {
@@ -57,11 +63,6 @@ class MangaApp {
         }
         
         container.innerHTML = items.map(item => {
-            // PERHATIAN: Field yang benar dari API adalah:
-            // - manga_id (bukan id)
-            // - cover_image_url (bukan cover_url)
-            // - title
-            
             const mangaId = item.manga_id || item.id;
             const coverUrl = this.api.constructor.getImageUrl(
                 item.cover_image_url || item.cover_url || item.thumbnail
@@ -103,10 +104,8 @@ class MangaApp {
         this.showLoading('manga-detail-container', 'Loading manga details...');
         
         try {
-            // HANYA gunakan v1 endpoint!
             const response = await this.api.getMangaDetail(mangaId);
             
-            // Check retcode
             if (response.retcode !== 0) {
                 throw new Error(response.message || 'Manga not found');
             }
@@ -117,9 +116,10 @@ class MangaApp {
                 throw new Error('No data received from API');
             }
             
+            this.currentManga = data;
             this.renderMangaDetail(data);
             
-            // Load chapters
+            // Load chapters dengan pagination
             this.loadChapters(mangaId);
             
         } catch (error) {
@@ -141,7 +141,6 @@ class MangaApp {
     renderMangaDetail(data) {
         const container = document.getElementById('manga-detail-container');
         
-        // PERHATIAN: Field yang benar dari API V1:
         const coverUrl = this.api.constructor.getImageUrl(data.cover_image_url);
         const title = data.title || 'Untitled';
         const description = data.description || 'No description';
@@ -154,11 +153,8 @@ class MangaApp {
             genres = data.taxonomy.Genre.map(g => g.name);
         }
         
+        // 🔥 FIX: HAPUS TOMBOL BACK ATAS, HANYA PAKAI YANG DI DALAM
         container.innerHTML = `
-            <button class="back-btn" onclick="window.MangaApp.showSection('home')">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
-            
             <div class="detail-container">
                 <div class="detail-cover">
                     <img src="${coverUrl}" 
@@ -167,7 +163,13 @@ class MangaApp {
                 </div>
                 
                 <div class="detail-content">
-                    <h1 class="detail-title">${title}</h1>
+                    <div class="detail-header">
+                        <h1 class="detail-title">${title}</h1>
+                        <!-- 🔥 TOMBOL BACK SATU-SATUNYA -->
+                        <button class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
+                            <i class="fas fa-arrow-left"></i> Back to Home
+                        </button>
+                    </div>
                     
                     <div class="detail-stats">
                         <span>👁️ ${viewCount} views</span>
@@ -198,57 +200,226 @@ class MangaApp {
     }
 
     async loadChapters(mangaId) {
+        console.log(`📚 Loading chapters for manga: ${mangaId}`);
+        
+        const container = document.getElementById('chapter-list-container');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="loading-chapters">
+                <div class="spinner"></div>
+                <p>Loading chapters...</p>
+                <p class="loading-info" id="loadingInfo">Fetching chapter list</p>
+            </div>
+        `;
+        
         try {
-            const response = await this.api.getChapterList(mangaId);
+            // Load pertama 100 chapter (perbaikan pagination)
+            const response = await this.api.request(`v1/chapter/${mangaId}/list`, {
+                page: 1,
+                page_size: 100, // 🔥 LOAD 100 CHAPTER SEKALIGUS
+                sort_by: 'chapter_number',
+                sort_order: 'desc'
+            });
             
             if (response.retcode !== 0) {
                 throw new Error(response.message || 'Failed to load chapters');
             }
             
             const chapters = response.data || [];
-            this.displayChapters(chapters);
+            const totalChapters = response.meta?.total_record || chapters.length;
+            const totalPages = response.meta?.total_page || 1;
+            
+            console.log(`📊 Loaded ${chapters.length} of ${totalChapters} chapters (Page 1/${totalPages})`);
+            
+            // Update loading info
+            document.getElementById('loadingInfo').textContent = 
+                `Loaded ${chapters.length} of ${totalChapters} chapters`;
+            
+            this.chapters = chapters;
+            this.displayChaptersWithPagination(chapters, totalChapters, totalPages, mangaId);
             
         } catch (error) {
             console.error('Error loading chapters:', error);
-            document.getElementById('chapter-list-container').innerHTML = `
-                <div class="error">Failed to load chapters: ${error.message}</div>
+            container.innerHTML = `
+                <div class="error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Failed to load chapters: ${error.message}</p>
+                    <button onclick="window.MangaApp.loadChapters('${mangaId}')" class="retry-btn">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                </div>
             `;
         }
     }
 
-    displayChapters(chapters) {
+    displayChaptersWithPagination(chapters, totalChapters, totalPages, mangaId) {
         const container = document.getElementById('chapter-list-container');
         if (!container) return;
         
-        if (!chapters || chapters.length === 0) {
+        if (chapters.length === 0) {
             container.innerHTML = '<div class="no-chapters">No chapters available</div>';
             return;
         }
         
-        container.innerHTML = chapters.map(chapter => {
-            const chapterId = chapter.chapter_id;
-            const chapterNum = chapter.chapter_number || '?';
-            const title = chapter.chapter_title || `Chapter ${chapterNum}`;
-            const date = this.formatDate(chapter.release_date);
+        // Group by 100s untuk organize
+        const groupedChapters = this.groupChapters(chapters);
+        
+        container.innerHTML = `
+            <div class="chapter-list-header">
+                <h3><i class="fas fa-list"></i> All Chapters</h3>
+                <div class="chapter-stats">
+                    <span class="stat-item">📚 ${totalChapters} Chapters</span>
+                    <span class="stat-item">📄 ${totalPages} Pages</span>
+                </div>
+            </div>
             
-            return `
-                <div class="chapter-item" data-id="${chapterId}">
-                    <div class="chapter-info">
-                        <div class="chapter-title">${title}</div>
-                        <div class="chapter-meta">
-                            <span class="chapter-date">${date}</span>
-                            <span class="chapter-views">👁️ ${this.formatNumber(chapter.view_count || 0)}</span>
-                        </div>
-                    </div>
-                    <div class="chapter-action">
-                        <i class="fas fa-book-open"></i>
+            <div class="chapter-search-container">
+                <input type="text" id="chapterSearch" 
+                       placeholder="Search chapter number (e.g., 1, 50, 100)..." 
+                       onkeyup="window.MangaApp.searchChapter(this.value)">
+                <button onclick="window.MangaApp.jumpToChapter()" class="jump-btn">
+                    <i class="fas fa-search"></i> Jump
+                </button>
+            </div>
+            
+            ${Object.entries(groupedChapters).map(([range, chaps]) => `
+                <div class="chapter-group">
+                    <h4 class="group-title">Chapters ${range}</h4>
+                    <div class="chapter-grid">
+                        ${chaps.map(chapter => this.renderChapterItem(chapter)).join('')}
                     </div>
                 </div>
-            `;
-        }).join('');
+            `).join('')}
+            
+            ${totalPages > 1 ? `
+                <div class="pagination-controls">
+                    <p>Showing ${chapters.length} of ${totalChapters} chapters</p>
+                    <button onclick="window.MangaApp.loadMoreChapters('${mangaId}', 2)" class="load-more-btn">
+                        <i class="fas fa-plus-circle"></i> Load More Chapters
+                    </button>
+                </div>
+            ` : ''}
+        `;
         
-        // Add click events
-        container.querySelectorAll('.chapter-item').forEach(item => {
+        this.bindChapterEvents();
+    }
+
+    groupChapters(chapters) {
+        const groups = {};
+        
+        chapters.forEach(chapter => {
+            const chapNum = chapter.chapter_number || 0;
+            const groupKey = Math.floor(chapNum / 100) * 100;
+            const groupName = `${groupKey + 1}-${groupKey + 100}`;
+            
+            if (!groups[groupName]) {
+                groups[groupName] = [];
+            }
+            groups[groupName].push(chapter);
+        });
+        
+        // Sort groups by range
+        const sortedGroups = {};
+        Object.keys(groups).sort((a, b) => {
+            const aStart = parseInt(a.split('-')[0]);
+            const bStart = parseInt(b.split('-')[0]);
+            return bStart - aStart; // Descending (newest first)
+        }).forEach(key => {
+            sortedGroups[key] = groups[key];
+        });
+        
+        return sortedGroups;
+    }
+
+    renderChapterItem(chapter) {
+        const chapterId = chapter.chapter_id;
+        const chapterNum = chapter.chapter_number || '?';
+        const title = chapter.chapter_title || `Chapter ${chapterNum}`;
+        const date = this.formatDate(chapter.release_date);
+        const views = this.formatNumber(chapter.view_count || 0);
+        
+        return `
+            <div class="chapter-item" data-id="${chapterId}" data-number="${chapterNum}">
+                <div class="chapter-info">
+                    <div class="chapter-title">${title}</div>
+                    <div class="chapter-meta">
+                        <span class="chapter-date">📅 ${date}</span>
+                        <span class="chapter-views">👁️ ${views}</span>
+                    </div>
+                </div>
+                <div class="chapter-action">
+                    <i class="fas fa-book-open"></i>
+                </div>
+            </div>
+        `;
+    }
+
+    async loadMoreChapters(mangaId, page) {
+        console.log(`📄 Loading more chapters, page ${page}...`);
+        
+        try {
+            const response = await this.api.request(`v1/chapter/${mangaId}/list`, {
+                page: page,
+                page_size: 100,
+                sort_by: 'chapter_number',
+                sort_order: 'desc'
+            });
+            
+            if (response.retcode !== 0) {
+                throw new Error(response.message || 'Failed to load more chapters');
+            }
+            
+            const newChapters = response.data || [];
+            console.log(`✅ Loaded ${newChapters.length} more chapters`);
+            
+            // Append to existing
+            this.chapters = [...this.chapters, ...newChapters];
+            const container = document.getElementById('chapter-list-container');
+            
+            // Group new chapters
+            const groupedNew = this.groupChapters(newChapters);
+            
+            // Add new groups
+            Object.entries(groupedNew).forEach(([range, chaps]) => {
+                const groupHTML = `
+                    <div class="chapter-group">
+                        <h4 class="group-title">Chapters ${range}</h4>
+                        <div class="chapter-grid">
+                            ${chaps.map(chapter => this.renderChapterItem(chapter)).join('')}
+                        </div>
+                    </div>
+                `;
+                
+                container.insertAdjacentHTML('beforeend', groupHTML);
+            });
+            
+            // Update pagination button
+            const totalPages = response.meta?.total_page || 1;
+            const paginationControls = container.querySelector('.pagination-controls');
+            
+            if (paginationControls && page < totalPages) {
+                paginationControls.innerHTML = `
+                    <button onclick="window.MangaApp.loadMoreChapters('${mangaId}', ${page + 1})" 
+                            class="load-more-btn">
+                        <i class="fas fa-plus-circle"></i> Load More (Page ${page + 1}/${totalPages})
+                    </button>
+                `;
+            } else if (paginationControls) {
+                paginationControls.innerHTML = '<p class="completed">✅ All chapters loaded</p>';
+            }
+            
+            // Rebind events for new chapters
+            this.bindChapterEvents();
+            
+        } catch (error) {
+            console.error('Error loading more chapters:', error);
+            this.showNotification(`Failed to load more chapters: ${error.message}`, 'error');
+        }
+    }
+
+    bindChapterEvents() {
+        document.querySelectorAll('.chapter-item').forEach(item => {
             item.addEventListener('click', async () => {
                 const chapterId = item.dataset.id;
                 await this.readChapter(chapterId);
@@ -267,13 +438,23 @@ class MangaApp {
             }
             
             const chapterData = response.data;
-            const images = chapterData.images || [];
             
-            if (images.length === 0) {
+            if (!chapterData.images || chapterData.images.length === 0) {
+                // Build images from chapter data jika tidak ada
+                if (chapterData.chapter) {
+                    const baseUrl = chapterData.base_url || 'https://assets.shngm.id';
+                    const path = chapterData.chapter.path;
+                    const imageFiles = chapterData.chapter.data;
+                    chapterData.images = imageFiles.map(img => `${baseUrl}${path}${img}`);
+                }
+            }
+            
+            if (!chapterData.images || chapterData.images.length === 0) {
                 alert('No images found in this chapter');
                 return;
             }
             
+            this.currentChapter = chapterData;
             this.showChapterReader(chapterData);
             
         } catch (error) {
@@ -283,22 +464,65 @@ class MangaApp {
     }
 
     showChapterReader(chapterData) {
-        // Simple reader untuk testing
+        // Hapus reader sebelumnya jika ada
+        const existingReader = document.getElementById('manga-reader');
+        if (existingReader) {
+            existingReader.remove();
+        }
+        
         const readerHTML = `
-            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: black; z-index: 10000; overflow: auto;">
-                <div style="position: sticky; top: 0; background: rgba(0,0,0,0.9); padding: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <button onclick="this.closest('div').remove()" style="background: #ff416c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
-                        Close Reader
-                    </button>
-                    <span style="color: white; font-weight: bold;">Chapter ${chapterData.chapter_number || ''}</span>
+            <div id="manga-reader" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: black; z-index: 10000; overflow: auto;">
+                <!-- HEADER -->
+                <div style="position: sticky; top: 0; background: rgba(0,0,0,0.95); padding: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10001; border-bottom: 1px solid #333;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <button id="closeReaderBtn" style="background: #ff416c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-times"></i> Close Reader
+                        </button>
+                        <span style="color: white; font-weight: bold; font-size: 1.1rem;">
+                            Chapter ${chapterData.chapter_number || ''}
+                        </span>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        ${chapterData.prev_chapter_id ? `
+                            <button id="prevChapterBtn" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid #555; padding: 8px 15px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-chevron-left"></i> Prev
+                            </button>
+                        ` : ''}
+                        
+                        ${chapterData.next_chapter_id ? `
+                            <button id="nextChapterBtn" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid #555; padding: 8px 15px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        ` : ''}
+                    </div>
                 </div>
+                
+                <!-- IMAGES -->
                 <div style="padding: 20px; text-align: center;">
                     ${(chapterData.images || []).map((img, idx) => `
-                        <img src="${img}" 
-                             alt="Page ${idx + 1}"
-                             style="max-width: 100%; margin-bottom: 20px; border-radius: 5px;"
-                             loading="lazy">
+                        <div style="margin-bottom: 20px; position: relative;">
+                            <img src="${img}" 
+                                 alt="Page ${idx + 1}"
+                                 style="max-width: 100%; border-radius: 5px; cursor: zoom-in;"
+                                 loading="lazy"
+                                 onclick="this.style.transform = this.style.transform === 'scale(1.5)' ? 'scale(1)' : 'scale(1.5)'; this.style.transition = 'transform 0.3s ease';">
+                            <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 3px; font-size: 0.8rem;">
+                                Page ${idx + 1}
+                            </div>
+                        </div>
                     `).join('')}
+                </div>
+                
+                <!-- FOOTER -->
+                <div style="position: sticky; bottom: 0; background: rgba(0,0,0,0.95); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #333;">
+                    <div style="color: #888; font-size: 0.9rem;">
+                        ${chapterData.images ? chapterData.images.length : 0} pages
+                    </div>
+                    <button onclick="document.getElementById('manga-reader').scrollTo({top: 0, behavior: 'smooth'})" 
+                            style="background: #4a00e0; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+                        <i class="fas fa-arrow-up"></i> Back to Top
+                    </button>
                 </div>
             </div>
         `;
@@ -306,11 +530,74 @@ class MangaApp {
         const readerDiv = document.createElement('div');
         readerDiv.innerHTML = readerHTML;
         document.body.appendChild(readerDiv);
+        
+        // 🔥 FIX: Add event listeners dengan BENAR
+        const closeBtn = document.getElementById('closeReaderBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                console.log('Closing reader...');
+                const reader = document.getElementById('manga-reader');
+                if (reader) {
+                    reader.remove();
+                    // 🔥 KEMBALI KE DETAIL PAGE
+                    this.showSection('detail');
+                    window.scrollTo(0, 0);
+                }
+            });
+        }
+        
+        // Navigation buttons
+        const prevBtn = document.getElementById('prevChapterBtn');
+        const nextBtn = document.getElementById('nextChapterBtn');
+        
+        if (prevBtn && chapterData.prev_chapter_id) {
+            prevBtn.addEventListener('click', async () => {
+                await this.readChapter(chapterData.prev_chapter_id);
+            });
+        } else if (prevBtn) {
+            prevBtn.disabled = true;
+            prevBtn.style.opacity = '0.5';
+        }
+        
+        if (nextBtn && chapterData.next_chapter_id) {
+            nextBtn.addEventListener('click', async () => {
+                await this.readChapter(chapterData.next_chapter_id);
+            });
+        } else if (nextBtn) {
+            nextBtn.disabled = true;
+            nextBtn.style.opacity = '0.5';
+        }
+        
+        // Fullscreen double click
+        readerDiv.addEventListener('dblclick', () => {
+            if (!document.fullscreenElement) {
+                readerDiv.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+        
+        // ESC key to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const reader = document.getElementById('manga-reader');
+                if (reader) {
+                    reader.remove();
+                    this.showSection('detail');
+                }
+            }
+        });
     }
 
     // ==================== UTILITIES ====================
 
     showSection(sectionId) {
+        // Update nav
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.toggle('active', link.dataset.section === sectionId);
+        });
+        
+        // Show section
         document.querySelectorAll('.content-section').forEach(section => {
             section.classList.remove('active');
         });
@@ -348,7 +635,12 @@ class MangaApp {
 
     showNotification(message, type = 'info') {
         // Simple notification
-        alert(`[${type.toUpperCase()}] ${message}`);
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        
+        // Bisa diganti dengan toast notification nanti
+        if (type === 'error') {
+            alert(`Error: ${message}`);
+        }
     }
 
     async checkAPIStatus() {
@@ -393,6 +685,38 @@ class MangaApp {
         });
     }
 
+    searchChapter(query) {
+        const searchTerm = query.toLowerCase();
+        const allItems = document.querySelectorAll('.chapter-item');
+        
+        allItems.forEach(item => {
+            const chapterNum = item.dataset.number || '';
+            const title = item.querySelector('.chapter-title').textContent.toLowerCase();
+            
+            if (chapterNum.includes(searchTerm) || title.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    jumpToChapter() {
+        const input = document.getElementById('chapterSearch');
+        const chapterNum = parseInt(input.value);
+        
+        if (!isNaN(chapterNum) && chapterNum > 0) {
+            // Scroll to chapter
+            const targetItem = document.querySelector(`.chapter-item[data-number="${chapterNum}"]`);
+            if (targetItem) {
+                targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetItem.style.animation = 'highlight 2s ease';
+            } else {
+                alert(`Chapter ${chapterNum} not found in current view. Try loading more chapters.`);
+            }
+        }
+    }
+
     bindEvents() {
         // Navigation
         document.querySelectorAll('.nav-link').forEach(link => {
@@ -414,6 +738,12 @@ class MangaApp {
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') this.performSearch();
             });
+        }
+        
+        // API Test button
+        const apiTestBtn = document.getElementById('apiTestBtn');
+        if (apiTestBtn) {
+            apiTestBtn.addEventListener('click', () => this.checkAPIStatus(true));
         }
     }
 
