@@ -1,38 +1,49 @@
+/**
+ * Manga App - FIXED FOR SHINIGAMI V1 API
+ */
+
 class MangaApp {
     constructor() {
         this.api = window.ShinigamiAPI;
-        this.currentManga = null;
         this.init();
     }
 
     init() {
-        console.log('🚀 Initializing Manga App...');
+        console.log('🚀 Initializing with Shinigami V1 API');
         this.bindEvents();
         this.loadHomeData();
+        this.checkAPIStatus();
     }
 
     async loadHomeData() {
+        console.log('📥 Loading home data...');
+        
         try {
             const data = await this.api.getHome();
             console.log('Home data:', data);
             
-            // Process data - handle different response formats
-            if (data.new) {
-                const newItems = data.new.data || data.new;
-                this.displayMangaGrid(newItems, 'new-manga');
+            // Pastikan kita akses data.data (karena response {data: [...]})
+            if (data.new && data.new.data) {
+                this.displayMangaGrid(data.new.data, 'new-manga');
+            } else {
+                this.showError('new-manga', 'No new manga data');
             }
             
-            if (data.top) {
-                const topItems = data.top.data || data.top;
-                this.displayMangaGrid(topItems, 'top-manga');
+            if (data.top && data.top.data) {
+                this.displayMangaGrid(data.top.data, 'top-manga');
+            } else {
+                this.showError('top-manga', 'No top manga data');
             }
             
-            if (data.recommend) {
-                const recItems = data.recommend.data || data.recommend;
-                this.displayMangaGrid(recItems, 'recommend-manga');
+            if (data.recommend && data.recommend.data) {
+                this.displayMangaGrid(data.recommend.data, 'recommend-manga');
+            } else {
+                this.showError('recommend-manga', 'No recommendations');
             }
+            
         } catch (error) {
             console.error('Error loading home:', error);
+            this.showNotification('Failed to load home data', 'error');
         }
     }
 
@@ -45,20 +56,21 @@ class MangaApp {
             return;
         }
         
-        // Ambil hanya 10 item pertama untuk preview
-        const displayItems = items.slice(0, 10);
-        
-        container.innerHTML = displayItems.map(item => {
-            // Handle different response formats
-            const coverUrl = item.cover_url || item.thumbnail || item.image || 
-                            `https://via.placeholder.com/300x400/1a1a2e/ffffff?text=${encodeURIComponent(item.title || 'Manga')}`;
+        container.innerHTML = items.map(item => {
+            // PERHATIAN: Field yang benar dari API adalah:
+            // - manga_id (bukan id)
+            // - cover_image_url (bukan cover_url)
+            // - title
             
-            const title = item.title || item.name || 'Untitled';
-            const mangaId = item.id || item._id || 'unknown';
-            const type = item.type || 'manga';
+            const mangaId = item.manga_id || item.id;
+            const coverUrl = this.api.constructor.getImageUrl(
+                item.cover_image_url || item.cover_url || item.thumbnail
+            );
+            const title = item.title || 'Untitled';
+            const viewCount = item.view_count ? this.formatNumber(item.view_count) : '';
             
             return `
-                <div class="manga-card" data-id="${mangaId}">
+                <div class="manga-card" data-id="${mangaId}" data-title="${title}">
                     <img src="${coverUrl}" 
                          alt="${title}"
                          loading="lazy"
@@ -66,8 +78,8 @@ class MangaApp {
                     <div class="manga-info">
                         <div class="manga-title">${title}</div>
                         <div class="manga-meta">
-                            <span>${type}</span>
-                            <span class="manga-status">${item.status || 'N/A'}</span>
+                            <span>${viewCount} views</span>
+                            <span class="manga-rating">⭐ ${item.user_rate || 'N/A'}</span>
                         </div>
                     </div>
                 </div>
@@ -78,63 +90,68 @@ class MangaApp {
         container.querySelectorAll('.manga-card').forEach(card => {
             card.addEventListener('click', () => {
                 const mangaId = card.dataset.id;
-                this.showMangaDetail(mangaId);
+                const mangaTitle = card.dataset.title;
+                this.showMangaDetail(mangaId, mangaTitle);
             });
         });
     }
 
-    async showMangaDetail(mangaId) {
-        console.log(`Loading detail for: ${mangaId}`);
+    async showMangaDetail(mangaId, mangaTitle = '') {
+        console.log(`📖 Loading detail for: ${mangaId}`);
+        
+        this.showSection('detail');
+        this.showLoading('manga-detail-container', 'Loading manga details...');
         
         try {
-            // Show loading
-            this.showSection('detail');
-            document.getElementById('manga-detail-container').innerHTML = 
-                '<div class="loading">Loading manga details...</div>';
+            // HANYA gunakan v1 endpoint!
+            const response = await this.api.getMangaDetail(mangaId);
             
-            // Fetch data
-            const data = await this.api.getMangaDetail(mangaId);
-            console.log('Manga detail:', data);
-            
-            if (data.error) {
-                throw new Error(data.message || 'Failed to load manga');
+            // Check retcode
+            if (response.retcode !== 0) {
+                throw new Error(response.message || 'Manga not found');
             }
             
-            this.currentManga = data;
-            this.displayMangaDetail(data);
+            const data = response.data;
+            
+            if (!data) {
+                throw new Error('No data received from API');
+            }
+            
+            this.renderMangaDetail(data);
+            
+            // Load chapters
+            this.loadChapters(mangaId);
             
         } catch (error) {
-            console.error('Error loading manga detail:', error);
+            console.error('❌ Error loading manga detail:', error);
+            
             document.getElementById('manga-detail-container').innerHTML = `
-                <div class="error-state">
-                    <i class="fas fa-exclamation-triangle"></i>
+                <div class="error-container">
                     <h3>Failed to load manga</h3>
                     <p>${error.message}</p>
-                    <button onclick="window.MangaApp.showSection('home')">Back to Home</button>
+                    <p><small>Manga ID: ${mangaId}</small></p>
+                    <button onclick="window.MangaApp.showSection('home')">
+                        Back to Home
+                    </button>
                 </div>
             `;
         }
     }
 
-    displayMangaDetail(data) {
+    renderMangaDetail(data) {
         const container = document.getElementById('manga-detail-container');
         
-        // Extract data with fallbacks
-        const coverUrl = data.cover_url || data.thumbnail || data.image || 
-                        `https://via.placeholder.com/400x600/1a1a2e/ffffff?text=${encodeURIComponent(data.title || 'Cover')}`;
+        // PERHATIAN: Field yang benar dari API V1:
+        const coverUrl = this.api.constructor.getImageUrl(data.cover_image_url);
+        const title = data.title || 'Untitled';
+        const description = data.description || 'No description';
+        const viewCount = this.formatNumber(data.view_count || 0);
+        const rating = data.user_rate || 'N/A';
         
-        const title = data.title || data.name || 'Unknown Title';
-        const description = data.description || data.synopsis || 'No description available.';
-        const author = data.author || 'Unknown Author';
-        const status = data.status || 'ongoing';
-        const genres = data.genres || data.tags || [];
-        
-        // Get chapters (handle different formats)
-        let chapters = [];
-        if (data.chapters && Array.isArray(data.chapters)) {
-            chapters = data.chapters;
-        } else if (data.chapter_list) {
-            chapters = data.chapter_list;
+        // Extract genres dari taxonomy
+        let genres = [];
+        if (data.taxonomy && data.taxonomy.Genre) {
+            genres = data.taxonomy.Genre.map(g => g.name);
         }
         
         container.innerHTML = `
@@ -146,101 +163,141 @@ class MangaApp {
                 <div class="detail-cover">
                     <img src="${coverUrl}" 
                          alt="${title}"
-                         onerror="this.src='https://via.placeholder.com/400x600/1a1a2e/ffffff?text=Cover+Error'">
+                         onerror="this.src='https://via.placeholder.com/400x600/1a1a2e/ffffff?text=Cover'">
                 </div>
                 
                 <div class="detail-content">
-                    <h1>${title}</h1>
+                    <h1 class="detail-title">${title}</h1>
+                    
+                    <div class="detail-stats">
+                        <span>👁️ ${viewCount} views</span>
+                        <span>⭐ ${rating}/10</span>
+                        <span>📅 ${data.release_year || 'N/A'}</span>
+                    </div>
                     
                     <div class="detail-meta">
-                        <span class="meta-tag">${author}</span>
-                        <span class="meta-tag status-${status}">${status}</span>
-                        ${genres.slice(0, 5).map(genre => `
+                        ${genres.map(genre => `
                             <span class="meta-tag">${genre}</span>
                         `).join('')}
                     </div>
                     
                     <div class="detail-description">
-                        ${description.replace(/\n/g, '<br>')}
+                        <h3>Description</h3>
+                        <p>${description}</p>
                     </div>
                     
                     <div class="chapter-list">
-                        <h3><i class="fas fa-list"></i> Chapters (${chapters.length})</h3>
-                        
-                        ${chapters.length > 0 ? `
-                            <div class="chapter-grid">
-                                ${chapters.slice(0, 20).map((chapter, idx) => `
-                                    <div class="chapter-item" data-id="${chapter.id || idx}">
-                                        <div class="chapter-title">
-                                            ${chapter.title || `Chapter ${chapter.chapter_number || idx + 1}`}
-                                        </div>
-                                        <div class="chapter-date">
-                                            ${chapter.created_at || chapter.date || ''}
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                            
-                            ${chapters.length > 20 ? `
-                                <p style="color: var(--text-secondary); margin-top: 10px;">
-                                    ... and ${chapters.length - 20} more chapters
-                                </p>
-                            ` : ''}
-                        ` : `
-                            <div class="loading">
-                                No chapters found or failed to load chapter list.
-                                <button onclick="window.MangaApp.loadChapters('${data.id}')">
-                                    Try Load Chapters
-                                </button>
-                            </div>
-                        `}
+                        <h3>Chapters</h3>
+                        <div id="chapter-list-container" class="chapter-grid">
+                            <div class="loading">Loading chapters...</div>
+                        </div>
                     </div>
                 </div>
             </div>
         `;
+    }
+
+    async loadChapters(mangaId) {
+        try {
+            const response = await this.api.getChapterList(mangaId);
+            
+            if (response.retcode !== 0) {
+                throw new Error(response.message || 'Failed to load chapters');
+            }
+            
+            const chapters = response.data || [];
+            this.displayChapters(chapters);
+            
+        } catch (error) {
+            console.error('Error loading chapters:', error);
+            document.getElementById('chapter-list-container').innerHTML = `
+                <div class="error">Failed to load chapters: ${error.message}</div>
+            `;
+        }
+    }
+
+    displayChapters(chapters) {
+        const container = document.getElementById('chapter-list-container');
+        if (!container) return;
         
-        // Add click events to chapters
-        if (chapters.length > 0) {
-            container.querySelectorAll('.chapter-item').forEach(item => {
-                item.addEventListener('click', async () => {
-                    const chapterId = item.dataset.id;
-                    console.log(`Reading chapter: ${chapterId}`);
-                    
-                    // Try to load chapter
-                    try {
-                        const chapterData = await this.api.getChapterDetail(chapterId);
-                        
-                        if (chapterData.images && chapterData.images.length > 0) {
-                            this.showChapterReader(chapterData);
-                        } else {
-                            alert('No images found in this chapter');
-                        }
-                    } catch (error) {
-                        console.error('Error loading chapter:', error);
-                        alert('Failed to load chapter: ' + error.message);
-                    }
-                });
+        if (!chapters || chapters.length === 0) {
+            container.innerHTML = '<div class="no-chapters">No chapters available</div>';
+            return;
+        }
+        
+        container.innerHTML = chapters.map(chapter => {
+            const chapterId = chapter.chapter_id;
+            const chapterNum = chapter.chapter_number || '?';
+            const title = chapter.chapter_title || `Chapter ${chapterNum}`;
+            const date = this.formatDate(chapter.release_date);
+            
+            return `
+                <div class="chapter-item" data-id="${chapterId}">
+                    <div class="chapter-info">
+                        <div class="chapter-title">${title}</div>
+                        <div class="chapter-meta">
+                            <span class="chapter-date">${date}</span>
+                            <span class="chapter-views">👁️ ${this.formatNumber(chapter.view_count || 0)}</span>
+                        </div>
+                    </div>
+                    <div class="chapter-action">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Add click events
+        container.querySelectorAll('.chapter-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const chapterId = item.dataset.id;
+                await this.readChapter(chapterId);
             });
+        });
+    }
+
+    async readChapter(chapterId) {
+        console.log(`📄 Reading chapter: ${chapterId}`);
+        
+        try {
+            const response = await this.api.getChapterDetail(chapterId);
+            
+            if (response.retcode !== 0) {
+                throw new Error(response.message || 'Chapter not found');
+            }
+            
+            const chapterData = response.data;
+            const images = chapterData.images || [];
+            
+            if (images.length === 0) {
+                alert('No images found in this chapter');
+                return;
+            }
+            
+            this.showChapterReader(chapterData);
+            
+        } catch (error) {
+            console.error('Error reading chapter:', error);
+            alert(`Failed to load chapter: ${error.message}`);
         }
     }
 
     showChapterReader(chapterData) {
-        // Simple chapter reader
+        // Simple reader untuk testing
         const readerHTML = `
-            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: black; z-index: 1000; overflow: auto;">
-                <div style="position: sticky; top: 0; background: rgba(0,0,0,0.8); padding: 10px; display: flex; justify-content: space-between;">
-                    <button onclick="window.MangaApp.closeReader()" style="background: #ff416c; color: white; border: none; padding: 8px 16px; border-radius: 4px;">
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: black; z-index: 10000; overflow: auto;">
+                <div style="position: sticky; top: 0; background: rgba(0,0,0,0.9); padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <button onclick="this.closest('div').remove()" style="background: #ff416c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
                         Close Reader
                     </button>
-                    <span style="color: white;">${chapterData.title || 'Chapter'}</span>
+                    <span style="color: white; font-weight: bold;">Chapter ${chapterData.chapter_number || ''}</span>
                 </div>
-                
                 <div style="padding: 20px; text-align: center;">
-                    ${chapterData.images.map((img, idx) => `
+                    ${(chapterData.images || []).map((img, idx) => `
                         <img src="${img}" 
                              alt="Page ${idx + 1}"
-                             style="max-width: 100%; margin-bottom: 10px; border-radius: 5px;"
-                             onerror="this.src='https://via.placeholder.com/800x1200/333/fff?text=Page+${idx + 1}'">
+                             style="max-width: 100%; margin-bottom: 20px; border-radius: 5px;"
+                             loading="lazy">
                     `).join('')}
                 </div>
             </div>
@@ -249,28 +306,91 @@ class MangaApp {
         const readerDiv = document.createElement('div');
         readerDiv.innerHTML = readerHTML;
         document.body.appendChild(readerDiv);
-        
-        this.currentReader = readerDiv;
     }
 
-    closeReader() {
-        if (this.currentReader) {
-            this.currentReader.remove();
-            this.currentReader = null;
-        }
-    }
+    // ==================== UTILITIES ====================
 
     showSection(sectionId) {
-        // Hide all sections
         document.querySelectorAll('.content-section').forEach(section => {
             section.classList.remove('active');
         });
         
-        // Show target section
         const target = document.getElementById(`${sectionId}-section`);
         if (target) {
             target.classList.add('active');
+            window.scrollTo(0, 0);
         }
+    }
+
+    showLoading(containerId, message) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+    }
+
+    showError(containerId, message) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = `
+                <div class="error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+    }
+
+    showNotification(message, type = 'info') {
+        // Simple notification
+        alert(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    async checkAPIStatus() {
+        const statusDot = document.getElementById('apiStatusDot');
+        const statusText = document.getElementById('apiStatusText');
+        
+        if (!statusDot || !statusText) return;
+        
+        try {
+            const result = await this.api.testConnection();
+            
+            if (result.success) {
+                statusDot.classList.add('connected');
+                statusText.textContent = 'API Connected';
+                statusText.style.color = '#00C853';
+            } else {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'API Error';
+                statusText.style.color = '#F44336';
+            }
+        } catch (error) {
+            statusDot.classList.remove('connected');
+            statusText.textContent = 'Connection Failed';
+            statusText.style.color = '#F44336';
+        }
+    }
+
+    formatNumber(num) {
+        if (!num) return '0';
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toString();
+    }
+
+    formatDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
     }
 
     bindEvents() {
@@ -301,29 +421,41 @@ class MangaApp {
         const input = document.getElementById('searchInput');
         const query = input.value.trim();
         
-        if (!query) return;
+        if (!query) {
+            this.showNotification('Please enter search keyword', 'warning');
+            return;
+        }
+        
+        this.showSection('search');
+        this.showLoading('search-results', `Searching for "${query}"...`);
         
         try {
-            const results = await this.api.search(query);
-            console.log('Search results:', results);
-            
-            // Show search results
-            this.showSection('search');
+            const response = await this.api.search(query);
             
             const container = document.getElementById('search-results');
-            if (results.data && results.data.length > 0) {
-                this.displayMangaGrid(results.data, 'search-results');
+            if (!container) return;
+            
+            if (response.retcode !== 0 || !response.data) {
+                container.innerHTML = '<div class="error">Search failed</div>';
+                return;
+            }
+            
+            const items = response.data;
+            
+            if (items.length === 0) {
+                container.innerHTML = `<div class="no-data">No results for "${query}"</div>`;
             } else {
-                container.innerHTML = '<div class="loading">No results found</div>';
+                this.displayMangaGrid(items, 'search-results');
             }
             
         } catch (error) {
             console.error('Search error:', error);
+            this.showNotification('Search failed', 'error');
         }
     }
 }
 
-// Initialize when ready
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     window.MangaApp = new MangaApp();
 });
