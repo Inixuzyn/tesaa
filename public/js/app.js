@@ -1,6 +1,6 @@
 /**
- * Manga App - COMPLETE FIXED VERSION
- * Includes: Chapter pagination, reader close fix, single back button
+ * Manga App - FINAL COMPLETE VERSION
+ * Includes: Chapter pagination, reader close fix, single back button, Mobile responsive
  */
 
 class MangaApp {
@@ -17,6 +17,26 @@ class MangaApp {
         this.bindEvents();
         this.loadHomeData();
         this.checkAPIStatus();
+        this.setupMobileMenu();
+    }
+
+    setupMobileMenu() {
+        // Mobile menu toggle
+        const menuToggle = document.getElementById('mobileMenuToggle');
+        const navMenu = document.querySelector('.nav-menu');
+        
+        if (menuToggle && navMenu) {
+            menuToggle.addEventListener('click', () => {
+                navMenu.classList.toggle('mobile-show');
+            });
+            
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!menuToggle.contains(e.target) && !navMenu.contains(e.target)) {
+                    navMenu.classList.remove('mobile-show');
+                }
+            });
+        }
     }
 
     async loadHomeData() {
@@ -24,7 +44,6 @@ class MangaApp {
         
         try {
             const data = await this.api.getHome();
-            console.log('Home data:', data);
             
             // Process new manga
             if (data.new && data.new.data) {
@@ -93,6 +112,9 @@ class MangaApp {
                 const mangaId = card.dataset.id;
                 const mangaTitle = card.dataset.title;
                 this.showMangaDetail(mangaId, mangaTitle);
+                
+                // Close mobile menu if open
+                document.querySelector('.nav-menu').classList.remove('mobile-show');
             });
         });
     }
@@ -153,7 +175,6 @@ class MangaApp {
             genres = data.taxonomy.Genre.map(g => g.name);
         }
         
-        // 🔥 FIX: HAPUS TOMBOL BACK ATAS, HANYA PAKAI YANG DI DALAM
         container.innerHTML = `
             <div class="detail-container">
                 <div class="detail-cover">
@@ -189,7 +210,7 @@ class MangaApp {
                     </div>
                     
                     <div class="chapter-list">
-                        <h3>Chapters</h3>
+                        <h3><i class="fas fa-list"></i> Chapters</h3>
                         <div id="chapter-list-container" class="chapter-grid">
                             <div class="loading">Loading chapters...</div>
                         </div>
@@ -214,10 +235,10 @@ class MangaApp {
         `;
         
         try {
-            // Load pertama 100 chapter (perbaikan pagination)
+            // Load pertama 100 chapter
             const response = await this.api.request(`v1/chapter/${mangaId}/list`, {
                 page: 1,
-                page_size: 100, // 🔥 LOAD 100 CHAPTER SEKALIGUS
+                page_size: 100,
                 sort_by: 'chapter_number',
                 sort_order: 'desc'
             });
@@ -231,10 +252,6 @@ class MangaApp {
             const totalPages = response.meta?.total_page || 1;
             
             console.log(`📊 Loaded ${chapters.length} of ${totalChapters} chapters (Page 1/${totalPages})`);
-            
-            // Update loading info
-            document.getElementById('loadingInfo').textContent = 
-                `Loaded ${chapters.length} of ${totalChapters} chapters`;
             
             this.chapters = chapters;
             this.displayChaptersWithPagination(chapters, totalChapters, totalPages, mangaId);
@@ -276,7 +293,7 @@ class MangaApp {
             
             <div class="chapter-search-container">
                 <input type="text" id="chapterSearch" 
-                       placeholder="Search chapter number (e.g., 1, 50, 100)..." 
+                       placeholder="Search chapter number..." 
                        onkeyup="window.MangaApp.searchChapter(this.value)">
                 <button onclick="window.MangaApp.jumpToChapter()" class="jump-btn">
                     <i class="fas fa-search"></i> Jump
@@ -470,57 +487,55 @@ class MangaApp {
             existingReader.remove();
         }
         
+        const isMobile = window.innerWidth <= 768;
+        
         const readerHTML = `
-            <div id="manga-reader" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: black; z-index: 10000; overflow: auto;">
+            <div id="manga-reader" class="manga-reader-container">
                 <!-- HEADER -->
-                <div style="position: sticky; top: 0; background: rgba(0,0,0,0.95); padding: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10001; border-bottom: 1px solid #333;">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <button id="closeReaderBtn" style="background: #ff416c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-times"></i> Close Reader
+                <div class="reader-header">
+                    <div class="reader-header-left">
+                        <button id="closeReaderBtn" class="close-reader-btn">
+                            <i class="fas fa-times"></i> ${isMobile ? 'Close' : 'Close Reader'}
                         </button>
-                        <span style="color: white; font-weight: bold; font-size: 1.1rem;">
+                        <span class="reader-chapter-title">
                             Chapter ${chapterData.chapter_number || ''}
                         </span>
                     </div>
                     
-                    <div style="display: flex; gap: 10px;">
+                    <div class="reader-header-right">
                         ${chapterData.prev_chapter_id ? `
-                            <button id="prevChapterBtn" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid #555; padding: 8px 15px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                                <i class="fas fa-chevron-left"></i> Prev
+                            <button id="prevChapterBtn" class="reader-nav-btn">
+                                <i class="fas fa-chevron-left"></i> ${isMobile ? '' : 'Prev'}
                             </button>
                         ` : ''}
                         
                         ${chapterData.next_chapter_id ? `
-                            <button id="nextChapterBtn" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid #555; padding: 8px 15px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                                Next <i class="fas fa-chevron-right"></i>
+                            <button id="nextChapterBtn" class="reader-nav-btn">
+                                ${isMobile ? '' : 'Next '}<i class="fas fa-chevron-right"></i>
                             </button>
                         ` : ''}
                     </div>
                 </div>
                 
                 <!-- IMAGES -->
-                <div style="padding: 20px; text-align: center;">
+                <div class="reader-images-container">
                     ${(chapterData.images || []).map((img, idx) => `
-                        <div style="margin-bottom: 20px; position: relative;">
+                        <div class="reader-page">
                             <img src="${img}" 
                                  alt="Page ${idx + 1}"
-                                 style="max-width: 100%; border-radius: 5px; cursor: zoom-in;"
-                                 loading="lazy"
-                                 onclick="this.style.transform = this.style.transform === 'scale(1.5)' ? 'scale(1)' : 'scale(1.5)'; this.style.transition = 'transform 0.3s ease';">
-                            <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 3px; font-size: 0.8rem;">
-                                Page ${idx + 1}
-                            </div>
+                                 class="reader-image"
+                                 loading="lazy">
+                            <div class="page-number">Page ${idx + 1}</div>
                         </div>
                     `).join('')}
                 </div>
                 
                 <!-- FOOTER -->
-                <div style="position: sticky; bottom: 0; background: rgba(0,0,0,0.95); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #333;">
-                    <div style="color: #888; font-size: 0.9rem;">
+                <div class="reader-footer">
+                    <div class="reader-footer-info">
                         ${chapterData.images ? chapterData.images.length : 0} pages
                     </div>
-                    <button onclick="document.getElementById('manga-reader').scrollTo({top: 0, behavior: 'smooth'})" 
-                            style="background: #4a00e0; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+                    <button id="backToTopBtn" class="back-to-top-btn">
                         <i class="fas fa-arrow-up"></i> Back to Top
                     </button>
                 </div>
@@ -568,6 +583,24 @@ class MangaApp {
             nextBtn.style.opacity = '0.5';
         }
         
+        // Back to top button
+        const backToTopBtn = document.getElementById('backToTopBtn');
+        if (backToTopBtn) {
+            backToTopBtn.addEventListener('click', () => {
+                document.querySelector('.manga-reader-container').scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        }
+        
+        // Image click zoom
+        document.querySelectorAll('.reader-image').forEach(img => {
+            img.addEventListener('click', function() {
+                this.classList.toggle('zoomed');
+            });
+        });
+        
         // Fullscreen double click
         readerDiv.addEventListener('dblclick', () => {
             if (!document.fullscreenElement) {
@@ -607,6 +640,9 @@ class MangaApp {
             target.classList.add('active');
             window.scrollTo(0, 0);
         }
+        
+        // Close mobile menu if open
+        document.querySelector('.nav-menu').classList.remove('mobile-show');
     }
 
     showLoading(containerId, message) {
@@ -744,6 +780,24 @@ class MangaApp {
         const apiTestBtn = document.getElementById('apiTestBtn');
         if (apiTestBtn) {
             apiTestBtn.addEventListener('click', () => this.checkAPIStatus(true));
+        }
+        
+        // Window resize untuk mobile
+        window.addEventListener('resize', () => {
+            // Update mobile UI jika perlu
+            this.handleResize();
+        });
+    }
+    
+    handleResize() {
+        // Handle responsive changes
+        const isMobile = window.innerWidth <= 768;
+        
+        // Update reader jika sedang terbuka
+        const reader = document.getElementById('manga-reader');
+        if (reader && this.currentChapter) {
+            reader.remove();
+            this.showChapterReader(this.currentChapter);
         }
     }
 
