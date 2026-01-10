@@ -1,20 +1,19 @@
 /**
- * API Service - FIXED ENDPOINTS
+ * Shinigami API Service - FIXED FOR V1 API
  */
 
 class ShinigamiAPI {
     constructor() {
         this.baseUrl = '/api';
         this.cache = new Map();
-        this.cacheDuration = 180000; // 3 menit
     }
 
     async request(endpoint, params = {}) {
         try {
             // Build URL
-            let url = `${this.baseUrl}/${endpoint}`;
+            let url = `${this.baseUrl}/${endpoint.replace(/^\/+/, '')}`;
             
-            // Add params
+            // Add query parameters
             if (Object.keys(params).length > 0) {
                 const queryString = new URLSearchParams(params).toString();
                 url += `?${queryString}`;
@@ -22,27 +21,9 @@ class ShinigamiAPI {
             
             console.log(`[API] Fetching: ${url}`);
             
-            // Check cache
-            const cacheKey = url;
-            const cached = this.cache.get(cacheKey);
-            
-            if (cached && Date.now() - cached.timestamp < this.cacheDuration) {
-                console.log(`[Cache] ${endpoint}`);
-                return cached.data;
-            }
-            
-            // Fetch with timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-            
             const response = await fetch(url, {
-                signal: controller.signal,
-                headers: {
-                    'Accept': 'application/json'
-                }
+                headers: { 'Accept': 'application/json' }
             });
-            
-            clearTimeout(timeoutId);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
@@ -50,84 +31,81 @@ class ShinigamiAPI {
             
             const data = await response.json();
             
-            // Cache the response
-            this.cache.set(cacheKey, {
-                data: data,
-                timestamp: Date.now()
-            });
+            // Check retcode (Shinigami API style)
+            if (data.retcode !== undefined && data.retcode !== 0) {
+                throw new Error(data.message || `API error ${data.retcode}`);
+            }
             
             return data;
             
         } catch (error) {
-            console.error(`API Error (${endpoint}):`, error);
+            console.error(`❌ API Error (${endpoint}):`, error);
             
-            // Return fallback untuk testing
-            return this.getFallbackData(endpoint, params);
+            // Return fallback structure yang match dengan API
+            return {
+                retcode: 500,
+                message: error.message,
+                data: this.getFallbackData(endpoint)
+            };
         }
     }
 
-    getFallbackData(endpoint, params) {
-        // Fallback data untuk testing
+    getFallbackData(endpoint) {
+        // Fallback data dengan struktur yang sama
         if (endpoint.includes('manga/list')) {
-            return {
-                data: [
-                    {
-                        id: "demo-1",
-                        title: "Solo Leveling",
-                        cover_url: "https://via.placeholder.com/300x400/4a00e0/ffffff?text=Solo+Leveling",
-                        type: "manhwa",
-                        status: "ongoing",
-                        description: "Demo description for testing"
-                    },
-                    {
-                        id: "demo-2", 
-                        title: "One Piece",
-                        cover_url: "https://via.placeholder.com/300x400/8e2de2/ffffff?text=One+Piece",
-                        type: "manga",
-                        status: "ongoing"
-                    }
-                ]
-            };
+            return [
+                {
+                    manga_id: "demo-1",
+                    title: "Demo Manga",
+                    cover_image_url: "https://via.placeholder.com/300x400/4a00e0/ffffff?text=Demo",
+                    description: "This is demo data",
+                    view_count: 1000,
+                    user_rate: 8.5
+                }
+            ];
         }
         
         if (endpoint.includes('manga/detail')) {
             return {
-                id: params.manga_id || "demo-1",
-                title: "Demo Manga",
-                cover_url: "https://via.placeholder.com/600x800/4a00e0/ffffff?text=Demo+Cover",
-                description: "This is a demo manga description for testing purposes.",
-                author: "Demo Author",
-                status: "ongoing",
-                genres: ["Action", "Adventure", "Fantasy"],
-                chapters: [
-                    { id: "chap-1", title: "Chapter 1", chapter_number: 1 },
-                    { id: "chap-2", title: "Chapter 2", chapter_number: 2 }
-                ]
+                title: "Demo Manga Detail",
+                cover_image_url: "https://via.placeholder.com/400x600/4a00e0/ffffff?text=Cover",
+                description: "Demo description",
+                view_count: 10000,
+                user_rate: 9.0,
+                taxonomy: {
+                    Genre: [{name: "Action"}, {name: "Adventure"}],
+                    Format: [{name: "Manhwa"}]
+                }
             };
         }
         
-        return { error: "API unavailable", endpoint: endpoint };
+        return null;
     }
 
     // ==================== MAIN ENDPOINTS ====================
-    
+
     async getHome() {
-        return this.request('home');
+        const data = await this.request('home');
+        
+        // Format response untuk frontend
+        return {
+            new: { data: data.new?.data || [] },
+            top: { data: data.top?.data || [] },
+            recommend: { data: data.recommend?.data || [] }
+        };
     }
 
     async getMangaList(params = {}) {
-        return this.request('v1/manga/list', params);
+        const data = await this.request('v1/manga/list', params);
+        return data;
     }
 
     async getMangaDetail(mangaId) {
-        // Coba v1 endpoint dulu
+        // HANYA gunakan v1 endpoint!
         const data = await this.request(`v1/manga/detail/${mangaId}`);
         
-        // Jika error, coba legacy
-        if (data.error || !data.id) {
-            console.log('Trying legacy endpoint...');
-            const legacyData = await this.request(`manhwa-detail/${mangaId}`);
-            return legacyData;
+        if (data.retcode !== 0) {
+            throw new Error(data.message || "Manga not found");
         }
         
         return data;
@@ -143,24 +121,46 @@ class ShinigamiAPI {
     }
 
     async getChapterDetail(chapterId) {
-        // Coba v1 dulu
         const data = await this.request(`v1/chapter/detail/${chapterId}`);
         
-        // Jika error, coba legacy
-        if (data.error || !data.images) {
-            const legacyData = await this.request(`chapter/${chapterId}`);
-            return legacyData;
+        // Build full image URLs
+        if (data.retcode === 0 && data.data) {
+            const chapter = data.data;
+            if (chapter.chapter) {
+                const baseUrl = chapter.base_url || 'https://assets.shngm.id';
+                const path = chapter.chapter.path;
+                const images = chapter.chapter.data.map(img => `${baseUrl}${path}${img}`);
+                chapter.images = images;
+            }
         }
         
         return data;
     }
 
-    async search(query, page = 1) {
-        return this.request('search', { q: query, page: page });
+    async search(query) {
+        return this.request('search', { q: query });
     }
 
     // ==================== UTILITIES ====================
-    
+
+    static getImageUrl(imagePath) {
+        if (!imagePath) {
+            return 'https://via.placeholder.com/300x400/1a1a2e/ffffff?text=No+Image';
+        }
+        
+        // Jika sudah full URL
+        if (imagePath.startsWith('http')) {
+            return imagePath;
+        }
+        
+        // Jika relative, tambahkan base URL
+        if (imagePath.startsWith('/')) {
+            return `https://api.shngm.io${imagePath}`;
+        }
+        
+        return imagePath;
+    }
+
     async testConnection() {
         try {
             const response = await fetch(`${this.baseUrl}/ping`);
@@ -169,31 +169,6 @@ class ShinigamiAPI {
         } catch (error) {
             return { success: false, error: error.message };
         }
-    }
-
-    clearCache() {
-        this.cache.clear();
-        console.log('[API] Cache cleared');
-    }
-
-    // Helper untuk image fallback
-    static getImageUrl(imagePath) {
-        if (!imagePath) {
-            return 'https://via.placeholder.com/300x400/1a1a2e/ffffff?text=No+Image';
-        }
-        
-        // Jika relative URL, convert ke absolute
-        if (imagePath.startsWith('/')) {
-            return `https://api.shngm.io${imagePath}`;
-        }
-        
-        // Jika sudah absolute, return as-is
-        if (imagePath.startsWith('http')) {
-            return imagePath;
-        }
-        
-        // Default fallback
-        return imagePath;
     }
 }
 
