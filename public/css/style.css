@@ -872,8 +872,7 @@ body {
     width: 100% !important;
     height: auto !important;
     max-width: 100% !important;
-    max-height: none !important;
-    
+    max-height: auto !important;
     display: block;
     margin: 0 auto;
     border-radius: 5px;
