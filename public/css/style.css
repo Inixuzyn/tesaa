@@ -869,29 +869,17 @@ body {
 
 /* 🔥 GAMBAR BESAR - FIXED NO ZOOM */
 .reader-image {
-    width: auto !important;
-    height: auto !important;
-    max-width: 95% !important;
-    max-height: 85vh !important;
-    border-radius: 5px;
-    cursor: default !important; /* 🔥 NO CLICK ZOOM */
-    background: #1a1a1a;
-    display: block;
-    margin: 0 auto;
-    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.7);
-}
-
-/* Untuk gambar landscape (lebar > tinggi) */
-.reader-image.landscape {
     width: 100% !important;
     height: auto !important;
-}
-
-/* Untuk gambar portrait (tinggi > lebar) */
-.reader-image.portrait {
-    width: auto !important;
-    height: auto !important;
-    max-height: 90vh !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    
+    display: block;
+    margin: 0 auto;
+    border-radius: 5px;
+    background: #1a1a1a;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, .7);
+    cursor: default !important;
 }
 
 .page-number {
