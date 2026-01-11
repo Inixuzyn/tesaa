@@ -3,48 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tesaa Manga Reader</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <title>Tesaa Manga Reader - 3D Modern Experience</title>
+    <meta name="description" content="Baca manga, manhwa, dan manhua gratis dengan pengalaman 3D modern terbaik">
+    <meta name="keywords" content="manga, manhwa, baca komik gratis, 3d reader, manga online">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f0f1e">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Tesaa Manga Reader 3D">
+    <meta property="og:description" content="Baca manga dengan pengalaman 3D terbaik">
+    <meta property="og:image" content="/images/og-image.jpg">
+    <meta property="og:url" content="https://tesaa-manga.com">
+    <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-container">
+            <div class="loading-spinner">
+                <div class="spinner-3d"></div>
+            </div>
+            <div class="loading-text">
+                <h2>Tesaa 3D Reader</h2>
+                <p>Loading amazing experience...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-container">
+            <!-- Logo -->
             <div class="nav-brand">
-                <i class="fas fa-ghost"></i>
-                <span>Tesaa Manga Reader</span>
+                <div class="logo-icon">
+                    <i class="fas fa-cube"></i>
+                    <div class="logo-glow"></div>
+                </div>
+                <span class="logo-text">Tesaa<span class="logo-highlight">3D</span></span>
             </div>
-            
-            <!-- Mobile Menu Toggle -->
+
+            <!-- Mobile Toggle -->
             <button id="mobileMenuToggle" class="mobile-menu-toggle">
-                <i class="fas fa-bars"></i>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
             </button>
-            
+
+            <!-- Search -->
             <div class="nav-search">
                 <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="Cari manga/manhwa...">
-                    <button id="searchBtn">Cari</button>
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="Cari manga, manhwa, manhua..." autocomplete="off">
+                    <button id="searchBtn" class="search-btn">
+                        <i class="fas fa-rocket"></i>
+                        <span class="btn-text">Cari</span>
+                    </button>
+                    <div class="search-suggestions" id="searchSuggestions"></div>
                 </div>
             </div>
+
+            <!-- Menu -->
             <div class="nav-menu">
                 <a href="#" class="nav-link active" data-section="home">
-                    <i class="fas fa-home"></i> Home
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                    <div class="nav-glow"></div>
                 </a>
-                <a href="#" class="nav-link" data-section="new">
-                    <i class="fas fa-fire"></i> Terbaru
+                <a href="#" class="nav-link" data-section="latest">
+                    <i class="fas fa-bolt"></i>
+                    <span>Latest</span>
+                    <div class="nav-glow"></div>
                 </a>
-                <a href="#" class="nav-link" data-section="top">
-                    <i class="fas fa-crown"></i> Top
+                <a href="#" class="nav-link" data-section="trending">
+                    <i class="fas fa-fire"></i>
+                    <span>Trending</span>
+                    <div class="nav-glow"></div>
                 </a>
-                <a href="#" class="nav-link" data-section="recommend">
-                    <i class="fas fa-star"></i> Rekomendasi
+                <a href="#" class="nav-link" data-section="popular">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Popular</span>
+                    <div class="nav-glow"></div>
+                </a>
+                <a href="#" class="nav-link" data-section="favorites">
+                    <i class="fas fa-heart"></i>
+                    <span>Favorites</span>
+                    <div class="nav-glow"></div>
                 </a>
                 <a href="#" class="nav-link" data-section="history">
-                    <i class="fas fa-history"></i> History
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                    <div class="nav-glow"></div>
                 </a>
+            </div>
+
+            <!-- User Menu -->
+            <div class="user-menu">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="settings-btn" id="settingsBtn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
             </div>
         </div>
     </nav>
@@ -53,171 +131,589 @@
     <main class="main-content">
         <!-- Home Section -->
         <section id="home-section" class="content-section active">
-            <div class="hero">
-                <h1><i class="fas fa-book-open"></i> Baca Manga & Manhwa Gratis</h1>
-                <p>Ribuan judul manga, manhwa, dan manhua tersedia dalam berbagai genre</p>
+            <!-- Hero -->
+            <div class="hero-section">
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1 class="hero-title">
+                            <span class="title-line">Discover Amazing</span>
+                            <span class="title-line highlight">Manga in 3D</span>
+                        </h1>
+                        <p class="hero-subtitle">
+                            Experience reading manga like never before. Thousands of titles with immersive 3D effects and smooth reading experience.
+                        </p>
+                        <div class="hero-actions">
+                            <button class="hero-btn primary" onclick="window.app.startReading()">
+                                <i class="fas fa-play"></i>
+                                <span>Start Reading</span>
+                            </button>
+                            <button class="hero-btn secondary" onclick="window.app.exploreLatest()">
+                                <i class="fas fa-compass"></i>
+                                <span>Explore Latest</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="hero-visual">
+                        <div class="floating-cards">
+                            <div class="card-3d card-1">
+                                <img src="https://via.placeholder.com/200x300/667eea/ffffff?text=3D" alt="Manga 1">
+                            </div>
+                            <div class="card-3d card-2">
+                                <img src="https://via.placeholder.com/200x300/764ba2/ffffff?text=Manga" alt="Manga 2">
+                            </div>
+                            <div class="card-3d card-3">
+                                <img src="https://via.placeholder.com/200x300/f093fb/ffffff?text=Manhwa" alt="Manga 3">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="hero-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-number" id="totalManga">10,000+</h3>
+                            <p class="stat-label">Manga Titles</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-number" id="totalChapters">500,000+</h3>
+                            <p class="stat-label">Chapters</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-number" id="activeUsers">50,000+</h3>
+                            <p class="stat-label">Active Readers</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-number" id="updateTime">24/7</h3>
+                            <p class="stat-label">Real-time Updates</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <div class="section-header">
-                <h2><i class="fas fa-bolt"></i> Update Terbaru</h2>
-                <a href="#" class="view-all" data-section="new">Lihat Semua</a>
-            </div>
-            <div id="new-manga" class="manga-grid">
-                <!-- Diisi oleh JavaScript -->
-                <div class="loading">Memuat data terbaru...</div>
-            </div>
-            
-            <div class="section-header">
-                <h2><i class="fas fa-crown"></i> Top Manga</h2>
-                <a href="#" class="view-all" data-section="top">Lihat Semua</a>
-            </div>
-            <div id="top-manga" class="manga-grid">
-                <!-- Diisi oleh JavaScript -->
-                <div class="loading">Memuat top manga...</div>
-            </div>
-            
-            <div class="section-header">
-                <h2><i class="fas fa-star"></i> Rekomendasi</h2>
-                <a href="#" class="view-all" data-section="recommend">Lihat Semua</a>
-            </div>
-            <div id="recommend-manga" class="manga-grid">
-                <!-- Diisi oleh JavaScript -->
-                <div class="loading">Memuat rekomendasi...</div>
+
+            <!-- Featured Sections -->
+            <div class="content-container">
+                <!-- Latest Updates -->
+                <section class="content-block">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-bolt"></i>
+                            Latest Updates
+                            <span class="badge-new">NEW</span>
+                        </h2>
+                        <a href="#" class="view-all" data-section="latest">
+                            View All
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div id="latest-manga" class="manga-grid">
+                        <div class="loading-cards">
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Trending Now -->
+                <section class="content-block">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-fire"></i>
+                            Trending Now
+                            <span class="badge-hot">HOT</span>
+                        </h2>
+                        <a href="#" class="view-all" data-section="trending">
+                            View All
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div id="trending-manga" class="manga-grid">
+                        <div class="loading-cards">
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Popular Series -->
+                <section class="content-block">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-chart-line"></i>
+                            Popular Series
+                            <span class="badge-popular">TOP</span>
+                        </h2>
+                        <a href="#" class="view-all" data-section="popular">
+                            View All
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div id="popular-manga" class="manga-grid">
+                        <div class="loading-cards">
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Recommended For You -->
+                <section class="content-block">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fas fa-star"></i>
+                            Recommended For You
+                            <span class="badge-recommended">PICK</span>
+                        </h2>
+                        <a href="#" class="view-all" data-section="recommend">
+                            View All
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div id="recommended-manga" class="manga-grid">
+                        <div class="loading-cards">
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                            <div class="skeleton-card"></div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </section>
 
-        <!-- New Manga Section -->
-        <section id="new-section" class="content-section">
-            <div class="section-header">
-                <h2><i class="fas fa-fire"></i> Manga Terbaru</h2>
-                <button id="refreshNew" class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
-                    <i class="fas fa-arrow-left"></i> Kembali ke Home
-                </button>
-            </div>
-            <div id="new-full-list" class="manga-grid full-grid">
-                <!-- Diisi oleh JavaScript -->
-                <div class="loading">Memuat manga terbaru...</div>
-            </div>
-            <div class="pagination">
-                <button id="prevNew" class="pagination-btn disabled">
-                    <i class="fas fa-chevron-left"></i> Sebelumnya
-                </button>
-                <span class="page-info">Halaman 1</span>
-                <button id="nextNew" class="pagination-btn">
-                    Selanjutnya <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </section>
-
-        <!-- Top Manga Section -->
-        <section id="top-section" class="content-section">
-            <div class="section-header">
-                <h2><i class="fas fa-crown"></i> Top Manga</h2>
-                <button class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
-                    <i class="fas fa-arrow-left"></i> Kembali ke Home
-                </button>
-            </div>
-            <div id="top-full-list" class="manga-grid full-grid">
-                <!-- Diisi oleh JavaScript -->
-                <div class="loading">Memuat top manga...</div>
+        <!-- Latest Section -->
+        <section id="latest-section" class="content-section">
+            <div class="content-container">
+                <div class="page-header">
+                    <button class="back-btn" onclick="window.app.showSection('home')">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Home
+                    </button>
+                    <h1>Latest Manga Updates</h1>
+                    <div class="page-controls">
+                        <button class="refresh-btn" onclick="window.app.refreshLatest()">
+                            <i class="fas fa-sync-alt"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                <div id="latest-full" class="manga-grid full-grid">
+                    <div class="loading">Loading latest manga...</div>
+                </div>
+                <div class="pagination">
+                    <button class="pagination-btn prev" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                        Previous
+                    </button>
+                    <div class="page-info">Page 1 of 1</div>
+                    <button class="pagination-btn next">
+                        Next
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
             </div>
         </section>
 
-        <!-- Recommendation Section -->
-        <section id="recommend-section" class="content-section">
-            <div class="section-header">
-                <h2><i class="fas fa-star"></i> Rekomendasi</h2>
-                <button class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
-                    <i class="fas fa-arrow-left"></i> Kembali ke Home
-                </button>
+        <!-- Trending Section -->
+        <section id="trending-section" class="content-section">
+            <div class="content-container">
+                <div class="page-header">
+                    <button class="back-btn" onclick="window.app.showSection('home')">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Home
+                    </button>
+                    <h1>Trending Manga</h1>
+                    <div class="page-controls">
+                        <select class="sort-select" onchange="window.app.sortTrending(this.value)">
+                            <option value="day">Today</option>
+                            <option value="week" selected>This Week</option>
+                            <option value="month">This Month</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="trending-full" class="manga-grid full-grid">
+                    <div class="loading">Loading trending manga...</div>
+                </div>
             </div>
-            <div id="recommend-full-list" class="manga-grid full-grid">
-                <!-- Diisi oleh JavaScript -->
-                <div class="loading">Memuat rekomendasi...</div>
+        </section>
+
+        <!-- Popular Section -->
+        <section id="popular-section" class="content-section">
+            <div class="content-container">
+                <div class="page-header">
+                    <button class="back-btn" onclick="window.app.showSection('home')">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Home
+                    </button>
+                    <h1>Popular Manga</h1>
+                    <div class="page-controls">
+                        <select class="sort-select" onchange="window.app.sortPopular(this.value)">
+                            <option value="all" selected>All Time</option>
+                            <option value="year">This Year</option>
+                            <option value="month">This Month</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="popular-full" class="manga-grid full-grid">
+                    <div class="loading">Loading popular manga...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Favorites Section -->
+        <section id="favorites-section" class="content-section">
+            <div class="content-container">
+                <div class="page-header">
+                    <button class="back-btn" onclick="window.app.showSection('home')">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Home
+                    </button>
+                    <h1>My Favorites</h1>
+                    <div class="page-controls">
+                        <button class="clear-btn" onclick="window.app.clearFavorites()">
+                            <i class="fas fa-trash"></i>
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+                <div id="favorites-list" class="manga-grid full-grid">
+                    <div class="empty-state">
+                        <i class="fas fa-heart"></i>
+                        <h3>No Favorites Yet</h3>
+                        <p>Start adding manga to your favorites list!</p>
+                        <button class="action-btn" onclick="window.app.showSection('home')">
+                            Browse Manga
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- History Section -->
+        <section id="history-section" class="content-section">
+            <div class="content-container">
+                <div class="page-header">
+                    <button class="back-btn" onclick="window.app.showSection('home')">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Home
+                    </button>
+                    <h1>Reading History</h1>
+                    <div class="page-controls">
+                        <button class="clear-btn" onclick="window.app.clearHistory()">
+                            <i class="fas fa-trash"></i>
+                            Clear History
+                        </button>
+                    </div>
+                </div>
+                <div id="history-list" class="history-grid">
+                    <div class="empty-state">
+                        <i class="fas fa-history"></i>
+                        <h3>No Reading History</h3>
+                        <p>Start reading manga to see your history here.</p>
+                        <button class="action-btn" onclick="window.app.showSection('home')">
+                            Start Reading
+                        </button>
+                    </div>
+                </div>
             </div>
         </section>
 
         <!-- Search Results Section -->
         <section id="search-section" class="content-section">
-            <div class="section-header">
-                <h2><i class="fas fa-search"></i> Hasil Pencarian</h2>
-                <span id="search-term" style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 10px;"></span>
-                <button class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
-                    <i class="fas fa-arrow-left"></i> Kembali ke Home
-                </button>
-            </div>
-            <div id="search-results" class="manga-grid full-grid">
-                <!-- Diisi oleh JavaScript -->
-                <div class="loading">Mencari...</div>
+            <div class="content-container">
+                <div class="page-header">
+                    <button class="back-btn" onclick="window.app.showSection('home')">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Home
+                    </button>
+                    <h1>Search Results</h1>
+                    <div class="search-info">
+                        Showing results for: <span id="searchQuery">""</span>
+                    </div>
+                </div>
+                <div id="search-results" class="manga-grid full-grid">
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <h3>Search for Manga</h3>
+                        <p>Use the search bar above to find manga.</p>
+                    </div>
+                </div>
             </div>
         </section>
 
         <!-- Manga Detail Section -->
         <section id="detail-section" class="content-section">
             <div id="manga-detail-container">
-                <!-- Diisi oleh JavaScript -->
-                <div class="loading">Memuat detail manga...</div>
+                <div class="loading">
+                    <div class="spinner-3d"></div>
+                    <p>Loading manga details...</p>
+                </div>
             </div>
         </section>
 
-        <!-- History Section -->
-        <section id="history-section" class="content-section">
-            <div class="section-header">
-                <h2><i class="fas fa-history"></i> Riwayat Baca</h2>
-                <button class="back-btn-bottom" onclick="window.MangaApp.showSection('home')">
-                    <i class="fas fa-arrow-left"></i> Kembali ke Home
-                </button>
-            </div>
-            <div id="history-list" class="history-container">
-                <!-- Riwayat akan dimuat di sini -->
-                <div class="empty-state">
-                    <i class="fas fa-history fa-3x"></i>
-                    <p>Belum ada riwayat baca</p>
-                    <button class="retry-btn" onclick="window.MangaApp.loadHistory()">
-                        <i class="fas fa-redo"></i> Muat Ulang
-                    </button>
+        <!-- Chapter List Section -->
+        <section id="chapters-section" class="content-section">
+            <div id="chapters-container">
+                <div class="loading">
+                    <div class="spinner-3d"></div>
+                    <p>Loading chapters...</p>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-info">
-                <h3><i class="fas fa-ghost"></i> Tesaa Manga Reader</h3>
-                <p>Website baca manga, manhwa, dan manhua gratis. Semua konten berasal dari API publik.</p>
-                <p class="disclaimer">
-                    <i class="fas fa-exclamation-triangle"></i> 
-                    Disclaimer: Konten adalah hak cipta pemilik masing-masing. Hanya untuk preview.
-                </p>
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-cog"></i>
+                    Settings
+                </h2>
+                <button class="modal-close" onclick="window.app.closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="footer-links">
-                <h4>Kategori</h4>
-                <a href="#" data-section="new">Terbaru</a>
-                <a href="#" data-section="top">Top Manga</a>
-                <a href="#" data-section="recommend">Rekomendasi</a>
-                <a href="#" data-section="history">Riwayat</a>
-            </div>
-            <div class="footer-status">
-                <h4>Status API</h4>
-                <div class="status-indicator">
-                    <span class="status-dot" id="apiStatusDot"></span>
-                    <span id="apiStatusText">Memeriksa...</span>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <h3>Reading Settings</h3>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="autoNextChapter" checked>
+                            <span>Auto-load next chapter</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="readerMode" checked>
+                            <span>Reader mode (minimal UI)</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <span>Image quality:</span>
+                            <select id="imageQuality">
+                                <option value="high">High</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </label>
+                    </div>
                 </div>
-                <button id="apiTestBtn" class="status-btn">
-                    <i class="fas fa-sync-alt"></i> Test Koneksi
+                <div class="setting-group">
+                    <h3>Display Settings</h3>
+                    <div class="setting-item">
+                        <label>
+                            <span>Theme:</span>
+                            <select id="themeSelect">
+                                <option value="dark" selected>Dark</option>
+                                <option value="light">Light</option>
+                                <option value="auto">Auto</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="animations" checked>
+                            <span>Enable animations</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <span>Font size:</span>
+                            <select id="fontSize">
+                                <option value="small">Small</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <h3>Data Settings</h3>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="saveHistory" checked>
+                            <span>Save reading history</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="cacheImages" checked>
+                            <span>Cache images</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn-danger" onclick="window.app.clearAllData()">
+                            <i class="fas fa-trash"></i>
+                            Clear All Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="window.app.saveSettings()">
+                    Save Settings
+                </button>
+                <button class="btn-secondary" onclick="window.app.closeModal()">
+                    Cancel
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- Reader Modal -->
+    <div id="readerModal" class="reader-modal">
+        <div class="reader-container" id="readerContainer"></div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <div class="footer-logo">
+                    <i class="fas fa-cube"></i>
+                    <span>Tesaa<span class="highlight">3D</span></span>
+                </div>
+                <p class="footer-description">
+                    Premium manga reading experience with 3D effects and smooth interface.
+                    Thousands of titles updated daily.
+                </p>
+                <div class="social-links">
+                    <a href="#" class="social-link"><i class="fab fa-discord"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-github"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-telegram"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul class="footer-links">
+                    <li><a href="#" data-section="home">Home</a></li>
+                    <li><a href="#" data-section="latest">Latest</a></li>
+                    <li><a href="#" data-section="trending">Trending</a></li>
+                    <li><a href="#" data-section="popular">Popular</a></li>
+                    <li><a href="#" data-section="favorites">Favorites</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Categories</h3>
+                <ul class="footer-links">
+                    <li><a href="#" data-genre="action">Action</a></li>
+                    <li><a href="#" data-genre="adventure">Adventure</a></li>
+                    <li><a href="#" data-genre="romance">Romance</a></li>
+                    <li><a href="#" data-genre="fantasy">Fantasy</a></li>
+                    <li><a href="#" data-genre="comedy">Comedy</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h3>Info</h3>
+                <div class="footer-info">
+                    <div class="info-item">
+                        <i class="fas fa-server"></i>
+                        <div>
+                            <span class="info-label">API Status:</span>
+                            <span class="info-value" id="apiStatus">Checking...</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-database"></i>
+                        <div>
+                            <span class="info-label">Data Version:</span>
+                            <span class="info-value">v3.0.0</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <span class="info-label">Last Updated:</span>
+                            <span class="info-value" id="lastUpdated">Just now</span>
+                        </div>
+                    </div>
+                    <button class="btn-outline" onclick="window.app.checkAPIStatus()">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh Status
+                    </button>
+                </div>
+            </div>
+        </div>
+        
         <div class="footer-bottom">
-            <p>&copy; 2025-2026 TesaaComic. Dibuat dengan <i class="fas fa-heart"></i> untuk komunitas manga.</p>
+            <div class="footer-disclaimer">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Disclaimer: All content is provided by third-party APIs. This site does not host any files. All rights belong to their respective owners.</p>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2025-2026 <strong>Tesaa 3D Manga Reader</strong>. Made with <i class="fas fa-heart"></i> for manga lovers.</p>
+                <p class="version">Version 3.0.0 - 3D Modern Edition</p>
+            </div>
         </div>
     </footer>
 
     <!-- JavaScript Files -->
     <script src="/js/api.js"></script>
     <script src="/js/app.js"></script>
-    <!-- Note: reader.js tidak lagi digunakan karena reader sudah built-in di app.js -->
+    <script>
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loading-screen').style.display = 'none';
+                }, 500);
+            }, 1500);
+            
+            // Initialize app
+            if (typeof window.app === 'undefined') {
+                window.app = new MangaApp3D();
+            }
+        });
+        
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && window.app) {
+                window.app.updateLastRead();
+            }
+        });
+    </script>
 </body>
 </html>
